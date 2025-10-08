@@ -19,6 +19,7 @@ export class ACPClient {
 	private connection: ClientSideConnection | null = null;
 	private sessionId: string | null = null;
 	private terminals: Map<string, ChildProcess> = new Map();
+	private terminalOutputs: Map<string, { stdout: string; stderr: string }> = new Map();
 	private updateCallback: ((update: SessionUpdate) => void) | null = null;
 
 	constructor(app: App, settings: ACPClientSettings) {
@@ -154,19 +155,39 @@ export class ACPClient {
 	}
 
 	private getVaultPath(): string {
-		// Try multiple methods to get the vault path
+		// The vault adapter has the base path
 		const adapter = this.app.vault.adapter as any;
 
-		if (adapter.getBasePath) {
-			return adapter.getBasePath();
+		// Try getBasePath() method
+		if (typeof adapter.getBasePath === 'function') {
+			const path = adapter.getBasePath();
+			console.log('Vault path from getBasePath():', path);
+			return path;
 		}
 
+		// Try basePath property
 		if (adapter.basePath) {
+			console.log('Vault path from basePath:', adapter.basePath);
 			return adapter.basePath;
 		}
 
-		// Fallback to process.cwd()
-		return process.cwd();
+		// Try using the vault root property
+		if (adapter.path) {
+			console.log('Vault path from path:', adapter.path);
+			return adapter.path;
+		}
+
+		// Last resort: process.cwd() is likely the plugin dir, so go up 3 levels
+		// from .obsidian/plugins/plugin-name to vault root
+		const cwd = process.cwd();
+		if (cwd.includes('.obsidian/plugins/')) {
+			const vaultPath = cwd.split('.obsidian')[0].replace(/\/$/, '');
+			console.log('Vault path from cwd parsing:', vaultPath);
+			return vaultPath;
+		}
+
+		console.log('Vault path fallback to cwd:', cwd);
+		return cwd;
 	}
 
 	async sendPrompt(prompt: string): Promise<void> {
@@ -297,8 +318,30 @@ export class ACPClient {
 			}
 		});
 
+		// Initialize output buffer
+		this.terminalOutputs.set(terminalId, { stdout: '', stderr: '' });
+
+		// Collect output continuously
+		terminal.stdout?.on('data', (data) => {
+			const output = this.terminalOutputs.get(terminalId);
+			if (output) {
+				output.stdout += data.toString();
+			}
+		});
+
+		terminal.stderr?.on('data', (data) => {
+			const output = this.terminalOutputs.get(terminalId);
+			if (output) {
+				output.stderr += data.toString();
+			}
+		});
+
 		terminal.on('error', (err) => {
 			console.error(`Terminal ${terminalId} error:`, err);
+			const output = this.terminalOutputs.get(terminalId);
+			if (output) {
+				output.stderr += `Error: ${err.message}\n`;
+			}
 		});
 
 		this.terminals.set(terminalId, terminal);
@@ -312,34 +355,33 @@ export class ACPClient {
 			throw new Error(`Terminal not found: ${params.terminalId}`);
 		}
 
-		// Collect output
-		let output = '';
+		const outputs = this.terminalOutputs.get(params.terminalId);
+		if (!outputs) {
+			throw new Error(`Terminal output buffer not found: ${params.terminalId}`);
+		}
 
-		return new Promise((resolve) => {
-			terminal.stdout?.on('data', (data) => {
-				output += data.toString();
-			});
+		// Combine stdout and stderr
+		const combinedOutput = outputs.stdout + outputs.stderr;
 
-			terminal.stderr?.on('data', (data) => {
-				output += data.toString();
-			});
+		const response: schema.TerminalOutputResponse = {
+			output: combinedOutput,
+			truncated: false
+		};
 
-			// Return current output immediately
-			setTimeout(() => {
-				const response: schema.TerminalOutputResponse = {
-					output,
-					truncated: false
-				};
+		// Include exit status if process has exited
+		if (terminal.exitCode !== null) {
+			response.exitStatus = {
+				exitCode: terminal.exitCode
+			};
+		}
 
-				if (terminal.exitCode !== null) {
-					response.exitStatus = {
-						exitCode: terminal.exitCode
-					};
-				}
-
-				resolve(response);
-			}, 100);
+		console.log(`Terminal ${params.terminalId} output:`, {
+			length: combinedOutput.length,
+			exitCode: terminal.exitCode,
+			preview: combinedOutput.substring(0, 100)
 		});
+
+		return response;
 	}
 
 	private async handleTerminalKill(params: schema.KillTerminalCommandRequest): Promise<schema.KillTerminalResponse | void> {
@@ -356,6 +398,7 @@ export class ACPClient {
 		if (terminal) {
 			terminal.kill();
 			this.terminals.delete(params.terminalId);
+			this.terminalOutputs.delete(params.terminalId);
 		}
 	}
 
@@ -378,6 +421,7 @@ export class ACPClient {
 			terminal.kill();
 		}
 		this.terminals.clear();
+		this.terminalOutputs.clear();
 
 		// Kill agent process
 		if (this.process) {

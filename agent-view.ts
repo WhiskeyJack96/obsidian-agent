@@ -191,6 +191,7 @@ export class AgentView extends ItemView {
 	}
 
 	private lastAgentMessage: HTMLElement | null = null;
+	private toolCallElements: Map<string, HTMLElement> = new Map();
 
 	private appendToLastAgentMessage(content: any): void {
 		if (content.type === 'text' && content.text) {
@@ -231,11 +232,30 @@ export class AgentView extends ItemView {
 	private handleToolCallUpdate(updateData: any): void {
 		this.lastAgentMessage = null; // End current message
 
-		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-tool' });
-		const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
-		senderEl.setText('Tool Call');
+		const toolCallId = updateData.toolCallId;
 
-		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+		// Check if we already have a message for this tool call
+		let messageEl = toolCallId ? this.toolCallElements.get(toolCallId) : null;
+
+		if (!messageEl) {
+			// Create new message for this tool call
+			messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-tool' });
+			const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
+			senderEl.setText('Tool Call');
+
+			if (toolCallId) {
+				this.toolCallElements.set(toolCallId, messageEl);
+			}
+		}
+
+		// Find or create content container
+		let contentEl = messageEl.querySelector('.acp-message-content') as HTMLElement;
+		if (!contentEl) {
+			contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+		} else {
+			// Clear and rebuild content
+			contentEl.empty();
+		}
 
 		// Show tool name and title
 		const toolHeader = contentEl.createDiv({ cls: 'acp-tool-header' });
@@ -248,12 +268,18 @@ export class AgentView extends ItemView {
 			statusBadge.setText(updateData.status);
 		}
 
-		// Show raw input if available
-		if (updateData.rawInput) {
-			const inputSection = contentEl.createDiv({ cls: 'acp-tool-section' });
-			inputSection.createEl('div', { text: 'Input:', cls: 'acp-tool-label' });
-			const inputPre = inputSection.createEl('pre', { cls: 'acp-tool-input' });
+		// Only show input for initial tool call or when completed
+		if (updateData.rawInput && updateData.status !== 'in_progress') {
+			const inputSection = contentEl.createDiv({ cls: 'acp-tool-section acp-tool-input-collapsed' });
+			const inputHeader = inputSection.createDiv({ cls: 'acp-tool-label acp-collapsible' });
+			inputHeader.setText('Input ▸');
+			const inputPre = inputSection.createEl('pre', { cls: 'acp-tool-input acp-collapsed' });
 			inputPre.setText(JSON.stringify(updateData.rawInput, null, 2));
+
+			inputHeader.addEventListener('click', () => {
+				inputPre.toggleClass('acp-collapsed', !inputPre.hasClass('acp-collapsed'));
+				inputHeader.setText(inputPre.hasClass('acp-collapsed') ? 'Input ▸' : 'Input ▾');
+			});
 		}
 
 		// Show content/output if available

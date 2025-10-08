@@ -283,3 +283,90 @@
 	max-height: 200px;
 	overflow-y: auto;
 }
+
+/* Permission Modal */
+.acp-permission-modal {
+	padding: 20px;
+}
+
+.acp-permission-tool-info {
+	margin: 15px 0;
+	padding: 10px;
+	background-color: var(--background-secondary);
+	border-radius: 4px;
+}
+
+.acp-permission-title {
+	font-weight: 600;
+	margin: 5px 0;
+	color: var(--text-accent);
+}
+
+.acp-permission-input {
+	margin-top: 10px;
+	max-height: 150px;
+	overflow-y: auto;
+	font-size: 0.85em;
+}
+
+.acp-permission-options {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin: 20px 0;
+}
+
+.acp-permission-option {
+	padding: 12px;
+	border: 2px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.acp-permission-option:hover {
+	background-color: var(--background-secondary);
+	border-color: var(--interactive-accent);
+}
+
+.acp-permission-allow_once,
+.acp-permission-allow_always {
+	border-color: var(--text-success);
+}
+
+.acp-permission-reject_once,
+.acp-permission-reject_always {
+	border-color: var(--text-error);
+}
+
+.acp-permission-cancel {
+	width: 100%;
+	padding: 10px;
+	background-color: var(--background-modifier-error);
+	color: var(--text-normal);
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: 500;
+}
+
+.acp-permission-cancel:hover {
+	opacity: 0.8;
+}
+
+/* Collapsible Tool Inputs */
+.acp-collapsible {
+	cursor: pointer;
+	user-select: none;
+}
+
+.acp-collapsible:hover {
+	color: var(--interactive-accent);
+}
+
+.acp-collapsed {
+	display: none;
+}

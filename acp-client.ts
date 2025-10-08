@@ -5,6 +5,7 @@ import { ReadableStream, WritableStream } from 'stream/web';
 import { App, Notice } from 'obsidian';
 import { ACPClientSettings } from './settings';
 import * as schema from '@zed-industries/agent-client-protocol';
+import { PermissionModal } from './permission-modal';
 
 export interface SessionUpdate {
 	type: 'message' | 'tool_call' | 'plan' | 'mode_change';
@@ -139,8 +140,9 @@ export class ACPClient {
 			throw new Error('Not connected to agent');
 		}
 
-		// Get vault base path - use adapter's getBasePath if available
-		const basePath = (this.app.vault.adapter as any).getBasePath?.() || process.cwd();
+		// Get vault base path
+		const basePath = this.getVaultPath();
+		console.log('Creating session with cwd:', basePath);
 
 		const response = await this.connection.newSession({
 			cwd: basePath,
@@ -149,6 +151,22 @@ export class ACPClient {
 
 		this.sessionId = response.sessionId;
 		console.log('Session created:', this.sessionId);
+	}
+
+	private getVaultPath(): string {
+		// Try multiple methods to get the vault path
+		const adapter = this.app.vault.adapter as any;
+
+		if (adapter.getBasePath) {
+			return adapter.getBasePath();
+		}
+
+		if (adapter.basePath) {
+			return adapter.basePath;
+		}
+
+		// Fallback to process.cwd()
+		return process.cwd();
 	}
 
 	async sendPrompt(prompt: string): Promise<void> {
@@ -188,7 +206,7 @@ export class ACPClient {
 	private async handleReadTextFile(params: schema.ReadTextFileRequest): Promise<schema.ReadTextFileResponse> {
 		try {
 			// Convert absolute path to vault-relative path if needed
-			const basePath = (this.app.vault.adapter as any).getBasePath?.() || process.cwd();
+			const basePath = this.getVaultPath();
 			let relativePath = params.path;
 
 			if (params.path.startsWith(basePath)) {
@@ -225,6 +243,8 @@ export class ACPClient {
 	}
 
 	private async handleRequestPermission(params: schema.RequestPermissionRequest): Promise<schema.RequestPermissionResponse> {
+		console.log('Permission requested:', params);
+
 		if (this.settings.autoApprovePermissions && params.options && params.options.length > 0) {
 			return {
 				outcome: {
@@ -234,16 +254,19 @@ export class ACPClient {
 			};
 		}
 
-		// In a real implementation, show a modal to the user
-		// For now, auto-approve the first option if available
-		console.log('Permission requested:', params);
+		// Show modal to the user
 		if (params.options && params.options.length > 0) {
-			return {
-				outcome: {
-					outcome: 'selected',
-					optionId: params.options[0].optionId
-				}
-			};
+			const modal = new PermissionModal(this.app, params.toolCall, params.options);
+			const selectedOption = await modal.requestPermission();
+
+			if (selectedOption) {
+				return {
+					outcome: {
+						outcome: 'selected',
+						optionId: selectedOption
+					}
+				};
+			}
 		}
 
 		return {
@@ -256,17 +279,22 @@ export class ACPClient {
 	private async handleTerminalCreate(params: schema.CreateTerminalRequest): Promise<schema.CreateTerminalResponse> {
 		const terminalId = Math.random().toString(36).substring(7);
 
-		const basePath = (this.app.vault.adapter as any).getBasePath?.() || process.cwd();
+		const basePath = this.getVaultPath();
+		const workingDir = params.cwd || basePath;
 
-		console.log('Creating terminal:', { command: params.command, args: params.args, cwd: params.cwd });
+		console.log('Creating terminal:', { command: params.command, args: params.args, cwd: workingDir });
 
 		// If no args provided, this might be a shell command - use shell: true
 		const useShell = !params.args || params.args.length === 0;
 
 		const terminal = spawn(params.command, params.args || [], {
-			cwd: params.cwd || basePath,
+			cwd: workingDir,
 			stdio: ['pipe', 'pipe', 'pipe'],
-			shell: useShell  // Use shell if it's a full command string
+			shell: useShell,  // Use shell if it's a full command string
+			env: {
+				...process.env,
+				PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:' + (process.env.PATH || '')
+			}
 		});
 
 		terminal.on('error', (err) => {

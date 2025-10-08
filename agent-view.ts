@@ -144,24 +144,49 @@ export class AgentView extends ItemView {
 	handleUpdate(update: SessionUpdate): void {
 		const data = update.data;
 
-		// Handle different session update types
+		// Log to console for debugging
+		console.log('Session update received:', data);
+
+		// Handle different session update types based on ACP spec
 		if (data.update) {
 			const updateData = data.update;
+			const updateType = updateData.sessionUpdate; // Note: it's sessionUpdate, not sessionUpdateType
 
-			// Handle agent message chunks
-			if (updateData.sessionUpdateType === 'agent_message_chunk' && updateData.content) {
+			console.log('Update type:', updateType);
+
+			// Handle agent message chunks (streaming text)
+			if (updateType === 'agent_message_chunk' && updateData.content) {
 				this.appendToLastAgentMessage(updateData.content);
 			}
 			// Handle available commands update
-			else if (updateData.sessionUpdateType === 'available_commands_update' && updateData.availableCommands) {
+			else if (updateType === 'available_commands_update' && updateData.availableCommands) {
 				this.showAvailableCommands(updateData.availableCommands);
 			}
-			// Handle other content updates
-			else if (updateData.content) {
-				if (updateData.content.type === 'text' && updateData.content.text) {
-					this.addMessage('agent', updateData.content.text);
-				}
+			// Handle tool call start
+			else if (updateType === 'tool_call') {
+				this.handleToolCallUpdate(updateData);
 			}
+			// Handle tool call updates (progress/completion)
+			else if (updateType === 'tool_call_update') {
+				this.handleToolCallUpdate(updateData);
+			}
+			// Handle plan updates
+			else if (updateType === 'plan_update' && updateData.plan) {
+				this.showPlan(updateData.plan);
+			}
+			// Handle current mode updates
+			else if (updateType === 'current_mode_update' && updateData.currentMode) {
+				this.showModeChange(updateData.currentMode);
+			}
+			// Fallback: show as formatted JSON for debugging
+			else {
+				console.warn('Unhandled update type:', updateType, updateData);
+				this.showDebugMessage(updateData);
+			}
+		} else {
+			// No update field, might be a different structure
+			console.warn('Update without update field:', data);
+			this.showDebugMessage(data);
 		}
 	}
 
@@ -199,6 +224,97 @@ export class AgentView extends ItemView {
 				item.appendText(` - ${cmd.description}`);
 			}
 		}
+
+		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+	}
+
+	private handleToolCallUpdate(updateData: any): void {
+		this.lastAgentMessage = null; // End current message
+
+		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-tool' });
+		const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
+		senderEl.setText('Tool Call');
+
+		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+
+		// Show tool name and title
+		const toolHeader = contentEl.createDiv({ cls: 'acp-tool-header' });
+		const titleText = updateData.title || updateData.kind || 'Tool Call';
+		toolHeader.createEl('strong', { text: titleText });
+
+		// Show tool status if available
+		if (updateData.status) {
+			const statusBadge = toolHeader.createEl('span', { cls: `acp-tool-status acp-tool-status-${updateData.status}` });
+			statusBadge.setText(updateData.status);
+		}
+
+		// Show raw input if available
+		if (updateData.rawInput) {
+			const inputSection = contentEl.createDiv({ cls: 'acp-tool-section' });
+			inputSection.createEl('div', { text: 'Input:', cls: 'acp-tool-label' });
+			const inputPre = inputSection.createEl('pre', { cls: 'acp-tool-input' });
+			inputPre.setText(JSON.stringify(updateData.rawInput, null, 2));
+		}
+
+		// Show content/output if available
+		if (updateData.content && Array.isArray(updateData.content) && updateData.content.length > 0) {
+			const outputSection = contentEl.createDiv({ cls: 'acp-tool-section' });
+			outputSection.createEl('div', { text: 'Output:', cls: 'acp-tool-label' });
+
+			for (const block of updateData.content) {
+				if (block.type === 'text' && block.text) {
+					outputSection.createEl('div', { text: block.text, cls: 'acp-tool-output-text' });
+				} else if (block.type === 'resource' && block.resource) {
+					const resourceEl = outputSection.createDiv({ cls: 'acp-tool-resource' });
+					resourceEl.createEl('strong', { text: block.resource.uri || 'Resource' });
+					if (block.resource.text) {
+						resourceEl.createEl('pre', { text: block.resource.text });
+					}
+				}
+			}
+		}
+
+		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+	}
+
+	private showPlan(plan: any): void {
+		this.lastAgentMessage = null;
+
+		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-plan' });
+		const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
+		senderEl.setText('Plan');
+
+		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+
+		if (typeof plan === 'string') {
+			contentEl.setText(plan);
+		} else if (plan.description) {
+			contentEl.setText(plan.description);
+		} else {
+			contentEl.setText(JSON.stringify(plan, null, 2));
+		}
+
+		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+	}
+
+	private showModeChange(mode: any): void {
+		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-system' });
+		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+
+		const modeName = typeof mode === 'string' ? mode : (mode.name || 'unknown');
+		contentEl.setText(`Mode changed to: ${modeName}`);
+
+		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+	}
+
+	private showDebugMessage(data: any): void {
+		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-debug' });
+		const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
+		senderEl.setText('Debug');
+
+		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+		const pre = contentEl.createEl('pre', { cls: 'acp-debug-json' });
+		pre.setText(JSON.stringify(data, null, 2));
 
 		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
 	}

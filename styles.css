@@ -183,3 +183,103 @@
 	display: block;
 	margin-bottom: 8px;
 }
+
+/* Tool Call Messages */
+.acp-message-tool {
+	background-color: var(--background-secondary-alt);
+	border-left: 3px solid var(--interactive-accent);
+}
+
+.acp-tool-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+.acp-tool-status {
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-size: 0.8em;
+	font-weight: 600;
+	text-transform: uppercase;
+}
+
+.acp-tool-status-pending {
+	background-color: var(--text-warning);
+	color: var(--text-on-accent);
+}
+
+.acp-tool-status-success {
+	background-color: var(--text-success);
+	color: var(--text-on-accent);
+}
+
+.acp-tool-status-error {
+	background-color: var(--text-error);
+	color: var(--text-on-accent);
+}
+
+.acp-tool-section {
+	margin: 10px 0;
+}
+
+.acp-tool-label {
+	font-weight: 600;
+	margin-bottom: 5px;
+	color: var(--text-muted);
+	font-size: 0.9em;
+}
+
+.acp-tool-input,
+.acp-tool-output-text {
+	background-color: var(--code-background);
+	padding: 8px;
+	border-radius: 4px;
+	font-family: var(--font-monospace);
+	font-size: 0.85em;
+	overflow-x: auto;
+	margin: 5px 0;
+}
+
+.acp-tool-output-text {
+	white-space: pre-wrap;
+}
+
+.acp-tool-resource {
+	background-color: var(--background-primary);
+	padding: 8px;
+	border-radius: 4px;
+	margin: 5px 0;
+}
+
+.acp-tool-resource strong {
+	color: var(--interactive-accent);
+	display: block;
+	margin-bottom: 5px;
+}
+
+.acp-tool-resource pre {
+	background-color: var(--code-background);
+	padding: 6px;
+	border-radius: 3px;
+	overflow-x: auto;
+}
+
+/* Plan Messages */
+.acp-message-plan {
+	background-color: var(--background-secondary-alt);
+	border-left: 3px solid var(--text-accent);
+}
+
+/* Debug Messages */
+.acp-message-debug {
+	background-color: var(--background-modifier-error);
+	opacity: 0.7;
+	font-size: 0.85em;
+}
+
+.acp-debug-json {
+	max-height: 200px;
+	overflow-y: auto;
+}

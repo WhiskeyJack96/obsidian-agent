@@ -187,14 +187,25 @@ export class ACPClient {
 
 	private async handleReadTextFile(params: schema.ReadTextFileRequest): Promise<schema.ReadTextFileResponse> {
 		try {
-			const file = this.app.vault.getAbstractFileByPath(params.path);
+			// Convert absolute path to vault-relative path if needed
+			const basePath = (this.app.vault.adapter as any).getBasePath?.() || process.cwd();
+			let relativePath = params.path;
+
+			if (params.path.startsWith(basePath)) {
+				relativePath = params.path.substring(basePath.length + 1);
+			}
+
+			console.log('Reading file:', { original: params.path, relative: relativePath, basePath });
+
+			const file = this.app.vault.getAbstractFileByPath(relativePath);
 			if (!file) {
-				throw new Error(`File not found: ${params.path}`);
+				throw new Error(`File not found: ${relativePath}`);
 			}
 
 			const content = await this.app.vault.read(file as any);
 			return { content };
 		} catch (err) {
+			console.error('File read error:', err);
 			throw new Error(`Failed to read file: ${err.message}`);
 		}
 	}
@@ -246,9 +257,20 @@ export class ACPClient {
 		const terminalId = Math.random().toString(36).substring(7);
 
 		const basePath = (this.app.vault.adapter as any).getBasePath?.() || process.cwd();
+
+		console.log('Creating terminal:', { command: params.command, args: params.args, cwd: params.cwd });
+
+		// If no args provided, this might be a shell command - use shell: true
+		const useShell = !params.args || params.args.length === 0;
+
 		const terminal = spawn(params.command, params.args || [], {
 			cwd: params.cwd || basePath,
-			stdio: ['pipe', 'pipe', 'pipe']
+			stdio: ['pipe', 'pipe', 'pipe'],
+			shell: useShell  // Use shell if it's a full command string
+		});
+
+		terminal.on('error', (err) => {
+			console.error(`Terminal ${terminalId} error:`, err);
 		});
 
 		this.terminals.set(terminalId, terminal);

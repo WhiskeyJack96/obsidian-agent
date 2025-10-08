@@ -8,7 +8,7 @@ import * as schema from '@zed-industries/agent-client-protocol';
 import { PermissionModal } from './permission-modal';
 
 export interface SessionUpdate {
-	type: 'message' | 'tool_call' | 'plan' | 'mode_change';
+	type: 'message' | 'tool_call' | 'plan' | 'mode_change' | 'permission_request';
 	data: any;
 }
 
@@ -275,19 +275,17 @@ export class ACPClient {
 			};
 		}
 
-		// Show modal to the user
-		if (params.options && params.options.length > 0) {
-			const modal = new PermissionModal(this.app, params.toolCall, params.options);
-			const selectedOption = await modal.requestPermission();
-
-			if (selectedOption) {
-				return {
-					outcome: {
-						outcome: 'selected',
-						optionId: selectedOption
+		// Send permission request to UI for inline approval
+		if (this.updateCallback && params.options && params.options.length > 0) {
+			return new Promise((resolve) => {
+				this.updateCallback!({
+					type: 'permission_request',
+					data: {
+						params,
+						resolve
 					}
-				};
-			}
+				});
+			});
 		}
 
 		return {

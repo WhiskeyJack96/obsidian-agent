@@ -184,40 +184,70 @@
 	margin-bottom: 8px;
 }
 
-/* Tool Call Messages */
+/* Tool Call Messages - Compact */
 .acp-message-tool {
 	background-color: var(--background-secondary-alt);
 	border-left: 3px solid var(--interactive-accent);
+	padding: 8px 12px;
+	margin-bottom: 8px;
+	font-size: 0.9em;
 }
 
-.acp-tool-header {
+.acp-tool-compact-header {
 	display: flex;
-	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 10px;
+	gap: 8px;
 }
 
-.acp-tool-status {
-	padding: 2px 8px;
-	border-radius: 3px;
-	font-size: 0.8em;
-	font-weight: 600;
-	text-transform: uppercase;
+.acp-tool-icon {
+	font-size: 1.2em;
 }
 
-.acp-tool-status-pending {
+.acp-tool-title {
+	flex: 1;
+	font-weight: 500;
+	color: var(--text-normal);
+}
+
+.acp-tool-status-badge {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	display: inline-block;
+}
+
+.acp-tool-status-badge.acp-tool-status-pending {
 	background-color: var(--text-warning);
-	color: var(--text-on-accent);
 }
 
-.acp-tool-status-success {
+.acp-tool-status-badge.acp-tool-status-in_progress {
+	background-color: var(--text-accent);
+	animation: pulse 1.5s ease-in-out infinite;
+}
+
+.acp-tool-status-badge.acp-tool-status-completed {
 	background-color: var(--text-success);
-	color: var(--text-on-accent);
 }
 
-.acp-tool-status-error {
+.acp-tool-status-badge.acp-tool-status-error {
 	background-color: var(--text-error);
-	color: var(--text-on-accent);
+}
+
+@keyframes pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.5; }
+}
+
+.acp-tool-output-compact {
+	margin-top: 6px;
+	padding: 6px;
+	background-color: var(--code-background);
+	border-radius: 3px;
+	font-family: var(--font-monospace);
+	font-size: 0.85em;
+	white-space: pre-wrap;
+	max-height: 100px;
+	overflow-y: auto;
 }
 
 .acp-tool-section {
@@ -284,77 +314,66 @@
 	overflow-y: auto;
 }
 
-/* Permission Modal */
-.acp-permission-modal {
-	padding: 20px;
+/* Permission Request - Inline */
+.acp-message-permission {
+	background-color: var(--background-modifier-warning);
+	border-left: 3px solid var(--text-warning);
 }
 
-.acp-permission-tool-info {
-	margin: 15px 0;
-	padding: 10px;
-	background-color: var(--background-secondary);
-	border-radius: 4px;
+.acp-permission-header {
+	margin-bottom: 8px;
 }
 
-.acp-permission-title {
+.acp-permission-header strong {
+	color: var(--text-warning);
+}
+
+.acp-permission-tool-title {
 	font-weight: 600;
-	margin: 5px 0;
-	color: var(--text-accent);
+	margin: 6px 0;
+	color: var(--text-normal);
 }
 
-.acp-permission-input {
-	margin-top: 10px;
-	max-height: 150px;
-	overflow-y: auto;
+.acp-permission-input-compact {
+	margin: 6px 0;
+	padding: 6px;
+	background-color: var(--code-background);
+	border-radius: 3px;
+	font-family: var(--font-monospace);
 	font-size: 0.85em;
 }
 
-.acp-permission-options {
+.acp-permission-actions {
 	display: flex;
-	flex-direction: column;
-	gap: 10px;
-	margin: 20px 0;
+	gap: 8px;
+	margin-top: 10px;
+	flex-wrap: wrap;
 }
 
-.acp-permission-option {
-	padding: 12px;
-	border: 2px solid var(--background-modifier-border);
-	border-radius: 6px;
-	background-color: var(--background-primary);
-	color: var(--text-normal);
+.acp-permission-btn {
+	padding: 6px 12px;
+	border: none;
+	border-radius: 4px;
+	font-size: 0.9em;
 	font-weight: 500;
 	cursor: pointer;
-	transition: all 0.2s;
+	transition: opacity 0.2s;
 }
 
-.acp-permission-option:hover {
-	background-color: var(--background-secondary);
-	border-color: var(--interactive-accent);
+.acp-permission-btn:hover {
+	opacity: 0.8;
 }
 
 .acp-permission-allow_once,
 .acp-permission-allow_always {
-	border-color: var(--text-success);
+	background-color: var(--text-success);
+	color: var(--text-on-accent);
 }
 
 .acp-permission-reject_once,
 .acp-permission-reject_always {
-	border-color: var(--text-error);
-}
-
-.acp-permission-cancel {
-	width: 100%;
-	padding: 10px;
-	background-color: var(--background-modifier-error);
-	color: var(--text-normal);
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-	font-weight: 500;
-}
-
-.acp-permission-cancel:hover {
-	opacity: 0.8;
+	background-color: var(--text-error);
+	color: var(--text-on-accent);
 }
 
 /* Collapsible Tool Inputs */

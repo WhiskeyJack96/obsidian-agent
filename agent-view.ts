@@ -144,6 +144,12 @@ export class AgentView extends ItemView {
 	handleUpdate(update: SessionUpdate): void {
 		const data = update.data;
 
+		// Handle permission requests specially
+		if (update.type === 'permission_request') {
+			this.showPermissionRequest(data.params, data.resolve);
+			return;
+		}
+
 		// Log to console for debugging
 		console.log('Session update received:', data);
 
@@ -240,8 +246,6 @@ export class AgentView extends ItemView {
 		if (!messageEl) {
 			// Create new message for this tool call
 			messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-tool' });
-			const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
-			senderEl.setText('Tool Call');
 
 			if (toolCallId) {
 				this.toolCallElements.set(toolCallId, messageEl);
@@ -257,47 +261,94 @@ export class AgentView extends ItemView {
 			contentEl.empty();
 		}
 
-		// Show tool name and title
-		const toolHeader = contentEl.createDiv({ cls: 'acp-tool-header' });
+		// Compact header with tool info and status
+		const toolHeader = contentEl.createDiv({ cls: 'acp-tool-compact-header' });
+
+		// Icon based on kind
+		const icon = this.getToolIcon(updateData.kind);
+		const iconEl = toolHeader.createSpan({ cls: 'acp-tool-icon', text: icon });
+
 		const titleText = updateData.title || updateData.kind || 'Tool Call';
-		toolHeader.createEl('strong', { text: titleText });
+		toolHeader.createSpan({ text: titleText, cls: 'acp-tool-title' });
 
-		// Show tool status if available
+		// Show tool status badge if available
 		if (updateData.status) {
-			const statusBadge = toolHeader.createEl('span', { cls: `acp-tool-status acp-tool-status-${updateData.status}` });
-			statusBadge.setText(updateData.status);
+			const statusBadge = toolHeader.createEl('span', { cls: `acp-tool-status-badge acp-tool-status-${updateData.status}` });
 		}
 
-		// Only show input for initial tool call or when completed
-		if (updateData.rawInput && updateData.status !== 'in_progress') {
-			const inputSection = contentEl.createDiv({ cls: 'acp-tool-section acp-tool-input-collapsed' });
-			const inputHeader = inputSection.createDiv({ cls: 'acp-tool-label acp-collapsible' });
-			inputHeader.setText('Input ▸');
-			const inputPre = inputSection.createEl('pre', { cls: 'acp-tool-input acp-collapsed' });
-			inputPre.setText(JSON.stringify(updateData.rawInput, null, 2));
-
-			inputHeader.addEventListener('click', () => {
-				inputPre.toggleClass('acp-collapsed', !inputPre.hasClass('acp-collapsed'));
-				inputHeader.setText(inputPre.hasClass('acp-collapsed') ? 'Input ▸' : 'Input ▾');
-			});
-		}
-
-		// Show content/output if available
-		if (updateData.content && Array.isArray(updateData.content) && updateData.content.length > 0) {
-			const outputSection = contentEl.createDiv({ cls: 'acp-tool-section' });
-			outputSection.createEl('div', { text: 'Output:', cls: 'acp-tool-label' });
-
+		// Show content/output if available (only when completed)
+		if (updateData.status === 'completed' && updateData.content && Array.isArray(updateData.content) && updateData.content.length > 0) {
 			for (const block of updateData.content) {
 				if (block.type === 'text' && block.text) {
-					outputSection.createEl('div', { text: block.text, cls: 'acp-tool-output-text' });
-				} else if (block.type === 'resource' && block.resource) {
-					const resourceEl = outputSection.createDiv({ cls: 'acp-tool-resource' });
-					resourceEl.createEl('strong', { text: block.resource.uri || 'Resource' });
-					if (block.resource.text) {
-						resourceEl.createEl('pre', { text: block.resource.text });
-					}
+					const outputEl = contentEl.createDiv({ cls: 'acp-tool-output-compact' });
+					outputEl.setText(block.text);
 				}
 			}
+		}
+
+		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+	}
+
+	private getToolIcon(kind: string): string {
+		const icons: Record<string, string> = {
+			'read': '📖',
+			'write': '✍️',
+			'execute': '⚡',
+			'search': '🔍',
+			'list': '📋',
+			'edit': '✏️'
+		};
+		return icons[kind] || '🔧';
+	}
+
+	private showPermissionRequest(params: any, resolve: (response: any) => void): void {
+		this.lastAgentMessage = null;
+
+		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-permission' });
+		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+
+		// Show what permission is being requested
+		const headerEl = contentEl.createDiv({ cls: 'acp-permission-header' });
+		headerEl.createEl('strong', { text: '🔐 Permission Required' });
+
+		if (params.toolCall && params.toolCall.title) {
+			const titleEl = contentEl.createDiv({ cls: 'acp-permission-tool-title' });
+			titleEl.setText(params.toolCall.title);
+		}
+
+		// Show compact input info
+		if (params.toolCall && params.toolCall.rawInput) {
+			const inputEl = contentEl.createDiv({ cls: 'acp-permission-input-compact' });
+			const cmd = params.toolCall.rawInput.command;
+			const desc = params.toolCall.rawInput.description;
+			if (cmd) {
+				inputEl.createEl('code', { text: cmd });
+			} else if (desc) {
+				inputEl.setText(desc);
+			}
+		}
+
+		// Create action buttons
+		const actionsEl = contentEl.createDiv({ cls: 'acp-permission-actions' });
+
+		for (const option of params.options) {
+			const button = actionsEl.createEl('button', {
+				cls: `acp-permission-btn acp-permission-${option.kind}`,
+				text: option.name
+			});
+
+			button.addEventListener('click', () => {
+				// Remove the permission request message
+				messageEl.remove();
+
+				// Resolve with selected option
+				resolve({
+					outcome: {
+						outcome: 'selected',
+						optionId: option.optionId
+					}
+				});
+			});
 		}
 
 		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;

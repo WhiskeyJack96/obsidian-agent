@@ -1,0 +1,153 @@
+/* ACP Agent View Container */
+.acp-agent-view {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 10px;
+}
+
+/* Status Indicator */
+.acp-status {
+	padding: 8px 12px;
+	margin-bottom: 10px;
+	background-color: var(--background-secondary);
+	border-radius: 4px;
+	font-size: 0.9em;
+	font-weight: 500;
+	text-align: center;
+}
+
+/* Messages Container */
+.acp-messages {
+	flex: 1;
+	overflow-y: auto;
+	margin-bottom: 10px;
+	padding: 10px;
+	background-color: var(--background-primary);
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+/* Individual Message */
+.acp-message {
+	margin-bottom: 15px;
+	padding: 10px;
+	border-radius: 6px;
+	background-color: var(--background-secondary);
+}
+
+.acp-message-user {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	margin-left: 20%;
+}
+
+.acp-message-agent {
+	background-color: var(--background-secondary);
+	margin-right: 20%;
+}
+
+.acp-message-system {
+	background-color: var(--background-modifier-success);
+	text-align: center;
+	font-style: italic;
+	opacity: 0.8;
+}
+
+.acp-message-sender {
+	font-weight: 600;
+	margin-bottom: 5px;
+	font-size: 0.85em;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.acp-message-content {
+	line-height: 1.5;
+	word-wrap: break-word;
+}
+
+.acp-message-content pre {
+	background-color: var(--code-background);
+	padding: 8px;
+	border-radius: 4px;
+	overflow-x: auto;
+	margin: 5px 0;
+}
+
+.acp-message-content p {
+	margin: 5px 0;
+}
+
+/* Tool Call Display */
+.acp-tool-call {
+	margin: 10px 0;
+	padding: 10px;
+	background-color: var(--background-primary-alt);
+	border-left: 3px solid var(--interactive-accent);
+	border-radius: 4px;
+}
+
+.acp-tool-call strong {
+	display: block;
+	margin-bottom: 5px;
+	color: var(--interactive-accent);
+}
+
+/* Input Container */
+.acp-input-container {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.acp-input {
+	width: 100%;
+	min-height: 60px;
+	padding: 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-family: var(--font-text);
+	font-size: 0.95em;
+	resize: vertical;
+}
+
+.acp-input:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+}
+
+.acp-button-container {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+.acp-send-button,
+.acp-control-button {
+	padding: 8px 16px;
+	border: none;
+	border-radius: 4px;
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-weight: 500;
+	cursor: pointer;
+	transition: opacity 0.2s;
+}
+
+.acp-control-button {
+	background-color: var(--background-secondary);
+	color: var(--text-normal);
+}
+
+.acp-send-button:hover,
+.acp-control-button:hover {
+	opacity: 0.8;
+}
+
+.acp-send-button:active,
+.acp-control-button:active {
+	opacity: 0.6;
+}

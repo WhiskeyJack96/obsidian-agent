@@ -8,7 +8,6 @@ export class AgentView extends ItemView {
 	private messagesContainer: HTMLElement;
 	private inputContainer: HTMLElement;
 	private inputField: HTMLTextAreaElement;
-	private sendButton: HTMLButtonElement;
 	private statusIndicator: HTMLElement;
 
 	constructor(leaf: WorkspaceLeaf) {
@@ -45,28 +44,21 @@ export class AgentView extends ItemView {
 		this.inputField = this.inputContainer.createEl('textarea', {
 			cls: 'acp-input',
 			attr: {
-				placeholder: 'Type your message to the agent...',
+				placeholder: 'Type your message to the agent... (Enter to send, Shift+Enter for newline)',
 				rows: '3'
 			}
 		});
 
-		const buttonContainer = this.inputContainer.createDiv({ cls: 'acp-button-container' });
-
-		this.sendButton = buttonContainer.createEl('button', {
-			cls: 'acp-send-button',
-			text: 'Send'
-		});
-
-		this.sendButton.addEventListener('click', () => this.sendMessage());
-
 		this.inputField.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+			if (e.key === 'Enter' && !e.shiftKey) {
 				e.preventDefault();
 				this.sendMessage();
 			}
 		});
 
 		// Add control buttons
+		const buttonContainer = this.inputContainer.createDiv({ cls: 'acp-button-container' });
+
 		const connectButton = buttonContainer.createEl('button', {
 			cls: 'acp-control-button',
 			text: 'Connect'

@@ -125,29 +125,21 @@
 	justify-content: flex-end;
 }
 
-.acp-send-button,
 .acp-control-button {
 	padding: 8px 16px;
 	border: none;
 	border-radius: 4px;
-	background-color: var(--interactive-accent);
-	color: var(--text-on-accent);
+	background-color: var(--background-secondary);
+	color: var(--text-normal);
 	font-weight: 500;
 	cursor: pointer;
 	transition: opacity 0.2s;
 }
 
-.acp-control-button {
-	background-color: var(--background-secondary);
-	color: var(--text-normal);
-}
-
-.acp-send-button:hover,
 .acp-control-button:hover {
 	opacity: 0.8;
 }
 
-.acp-send-button:active,
 .acp-control-button:active {
 	opacity: 0.6;
 }

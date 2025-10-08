@@ -151,3 +151,35 @@
 .acp-control-button:active {
 	opacity: 0.6;
 }
+
+/* Command List */
+.acp-command-list {
+	list-style: none;
+	padding: 0;
+	margin: 10px 0 0 0;
+}
+
+.acp-command-list li {
+	padding: 6px 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.acp-command-list li:last-child {
+	border-bottom: none;
+}
+
+.acp-command-name {
+	background-color: var(--code-background);
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-family: var(--font-monospace);
+	font-size: 0.9em;
+	color: var(--interactive-accent);
+	font-weight: 600;
+}
+
+.acp-message-system strong {
+	color: var(--text-accent);
+	display: block;
+	margin-bottom: 8px;
+}

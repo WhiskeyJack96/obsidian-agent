@@ -142,42 +142,83 @@ export class AgentView extends ItemView {
 	}
 
 	handleUpdate(update: SessionUpdate): void {
-		if (update.type === 'message') {
-			this.addMessage('agent', JSON.stringify(update.data, null, 2));
+		const data = update.data;
+
+		// Handle different session update types
+		if (data.update) {
+			const updateData = data.update;
+
+			// Handle agent message chunks
+			if (updateData.sessionUpdateType === 'agent_message_chunk' && updateData.content) {
+				this.appendToLastAgentMessage(updateData.content);
+			}
+			// Handle available commands update
+			else if (updateData.sessionUpdateType === 'available_commands_update' && updateData.availableCommands) {
+				this.showAvailableCommands(updateData.availableCommands);
+			}
+			// Handle other content updates
+			else if (updateData.content) {
+				if (updateData.content.type === 'text' && updateData.content.text) {
+					this.addMessage('agent', updateData.content.text);
+				}
+			}
 		}
 	}
 
+	private lastAgentMessage: HTMLElement | null = null;
+
+	private appendToLastAgentMessage(content: any): void {
+		if (content.type === 'text' && content.text) {
+			if (!this.lastAgentMessage) {
+				this.lastAgentMessage = this.createAgentMessage();
+			}
+			this.lastAgentMessage.appendText(content.text);
+			this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+		}
+	}
+
+	private createAgentMessage(): HTMLElement {
+		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-agent' });
+		const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
+		senderEl.setText('Agent');
+		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+		return contentEl;
+	}
+
+	private showAvailableCommands(commands: any[]): void {
+		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-system' });
+		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+
+		contentEl.createEl('strong', { text: 'Available Commands:' });
+		const commandList = contentEl.createEl('ul', { cls: 'acp-command-list' });
+
+		for (const cmd of commands) {
+			const item = commandList.createEl('li');
+			item.createEl('code', { text: `/${cmd.name}`, cls: 'acp-command-name' });
+			if (cmd.description) {
+				item.appendText(` - ${cmd.description}`);
+			}
+		}
+
+		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+	}
+
 	addMessage(sender: 'user' | 'agent' | 'system', content: string): void {
+		// Reset last agent message tracker when adding a new message
+		if (sender === 'user' || sender === 'system') {
+			this.lastAgentMessage = null;
+		}
+
 		const messageEl = this.messagesContainer.createDiv({ cls: `acp-message acp-message-${sender}` });
 
 		const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
 		senderEl.setText(sender.charAt(0).toUpperCase() + sender.slice(1));
 
 		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+		contentEl.setText(content);
 
-		// For agent messages that might be JSON, try to parse and display nicely
 		if (sender === 'agent') {
-			try {
-				const parsed = JSON.parse(content);
-				if (parsed.content && Array.isArray(parsed.content)) {
-					// Display content blocks
-					for (const block of parsed.content) {
-						if (block.type === 'text') {
-							contentEl.createEl('p', { text: block.text });
-						} else if (block.type === 'tool_call') {
-							const toolCallEl = contentEl.createDiv({ cls: 'acp-tool-call' });
-							toolCallEl.createEl('strong', { text: `Tool: ${block.name}` });
-							toolCallEl.createEl('pre', { text: JSON.stringify(block.input, null, 2) });
-						}
-					}
-				} else {
-					contentEl.createEl('pre', { text: content });
-				}
-			} catch (e) {
-				contentEl.setText(content);
-			}
-		} else {
-			contentEl.setText(content);
+			this.lastAgentMessage = contentEl;
 		}
 
 		// Scroll to bottom

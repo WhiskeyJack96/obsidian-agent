@@ -268,7 +268,8 @@ export class AgentView extends ItemView {
 		const icon = this.getToolIcon(updateData.kind);
 		const iconEl = toolHeader.createSpan({ cls: 'acp-tool-icon', text: icon });
 
-		const titleText = updateData.title || updateData.kind || 'Tool Call';
+		// Generate descriptive title
+		const titleText = this.generateToolTitle(updateData);
 		toolHeader.createSpan({ text: titleText, cls: 'acp-tool-title' });
 
 		// Show tool status badge if available
@@ -281,12 +282,92 @@ export class AgentView extends ItemView {
 			for (const block of updateData.content) {
 				if (block.type === 'text' && block.text) {
 					const outputEl = contentEl.createDiv({ cls: 'acp-tool-output-compact' });
-					outputEl.setText(block.text);
+					this.renderTextContent(block.text, outputEl);
 				}
 			}
 		}
 
 		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+	}
+
+	private generateToolTitle(updateData: any): string {
+		// If title is provided, use it
+		if (updateData.title) {
+			return updateData.title;
+		}
+
+		// Try to extract meaningful info from rawInput
+		const rawInput = updateData.rawInput;
+		const kind = updateData.kind;
+
+		if (rawInput) {
+			// File operations
+			if (rawInput.path) {
+				const fileName = rawInput.path.split('/').pop() || rawInput.path;
+				if (kind === 'read') {
+					return `Read file "${fileName}"`;
+				} else if (kind === 'edit') {
+					return `Write file "${fileName}"`;
+				}
+			}
+
+			// Terminal commands
+			if (rawInput.command) {
+				const command = rawInput.command;
+				const args = rawInput.args ? ` ${rawInput.args.join(' ')}` : '';
+				return `Run: ${command}${args}`;
+			}
+
+			// Generic description if available
+			if (rawInput.description) {
+				return rawInput.description;
+			}
+		}
+
+		// Fallback to kind or generic text
+		return kind || 'Tool Call';
+	}
+
+	private renderTextContent(text: string, container: HTMLElement): void {
+		// Check if text contains markdown code blocks
+		const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+		let lastIndex = 0;
+		let match;
+
+		while ((match = codeBlockRegex.exec(text)) !== null) {
+			// Add text before code block
+			if (match.index > lastIndex) {
+				const textBefore = text.substring(lastIndex, match.index);
+				if (textBefore.trim()) {
+					container.appendText(textBefore);
+				}
+			}
+
+			// Add code block
+			const language = match[1] || '';
+			const code = match[2];
+			const pre = container.createEl('pre');
+			const codeEl = pre.createEl('code');
+			if (language) {
+				codeEl.addClass(`language-${language}`);
+			}
+			codeEl.setText(code);
+
+			lastIndex = match.index + match[0].length;
+		}
+
+		// Add remaining text
+		if (lastIndex < text.length) {
+			const remainingText = text.substring(lastIndex);
+			if (remainingText.trim()) {
+				container.appendText(remainingText);
+			}
+		}
+
+		// If no code blocks were found, just set the text
+		if (lastIndex === 0) {
+			container.setText(text);
+		}
 	}
 
 	private getToolIcon(kind: string): string {

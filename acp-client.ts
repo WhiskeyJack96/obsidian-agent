@@ -305,22 +305,33 @@ export class ACPClient {
 
 	private async handleWriteTextFile(params: schema.WriteTextFileRequest): Promise<schema.WriteTextFileResponse> {
 		try {
+			// Convert absolute path to vault-relative path if needed
+			const basePath = this.getVaultPath();
+			let relativePath = params.path;
+
+			if (params.path.startsWith(basePath)) {
+				relativePath = params.path.substring(basePath.length + 1);
+			}
+
+			console.log('Writing file:', { original: params.path, relative: relativePath, basePath });
+
 			// Request permission unless auto-approve is enabled
 			if (!this.settings.autoApprovePermissions) {
-				const permissionGranted = await this.requestFilePermission('write', params.path);
+				const permissionGranted = await this.requestFilePermission('write', relativePath);
 				if (!permissionGranted) {
 					throw new Error('Permission denied to write file');
 				}
 			}
 
-			const file = this.app.vault.getAbstractFileByPath(params.path);
+			const file = this.app.vault.getAbstractFileByPath(relativePath);
 			if (file) {
 				await this.app.vault.modify(file as any, params.content);
 			} else {
-				await this.app.vault.create(params.path, params.content);
+				await this.app.vault.create(relativePath, params.content);
 			}
 			return {};
 		} catch (err) {
+			console.error('File write error:', err);
 			throw new Error(`Failed to write file: ${err.message}`);
 		}
 	}

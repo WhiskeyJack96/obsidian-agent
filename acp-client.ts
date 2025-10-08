@@ -215,6 +215,52 @@ export class ACPClient {
 	}
 
 	// Client method implementations
+	private async requestFilePermission(operation: 'read' | 'write', path: string): Promise<boolean> {
+		if (!this.updateCallback || !this.sessionId) {
+			return false;
+		}
+
+		return new Promise((resolve) => {
+			const toolCallId = Math.random().toString(36).substring(7);
+			const permissionParams: schema.RequestPermissionRequest = {
+				sessionId: this.sessionId!,
+				toolCall: {
+					toolCallId: toolCallId,
+					title: `${operation === 'read' ? 'Read' : 'Write'} file: ${path}`,
+					kind: operation === 'read' ? 'read' : 'edit',
+					rawInput: {
+						path: path,
+						operation: operation
+					}
+				},
+				options: [
+					{
+						optionId: 'allow',
+						name: 'Allow',
+						kind: 'allow_once'
+					},
+					{
+						optionId: 'deny',
+						name: 'Deny',
+						kind: 'reject_once'
+					}
+				]
+			};
+
+			this.updateCallback!({
+				type: 'permission_request',
+				data: {
+					params: permissionParams,
+					resolve: (response: schema.RequestPermissionResponse) => {
+						const granted = response.outcome?.outcome === 'selected' &&
+									   response.outcome?.optionId === 'allow';
+						resolve(granted);
+					}
+				}
+			});
+		});
+	}
+
 	private async handleSessionUpdate(params: schema.SessionNotification): Promise<void> {
 		if (this.updateCallback) {
 			this.updateCallback({
@@ -236,6 +282,14 @@ export class ACPClient {
 
 			console.log('Reading file:', { original: params.path, relative: relativePath, basePath });
 
+			// Request permission unless auto-approve is enabled
+			if (!this.settings.autoApprovePermissions) {
+				const permissionGranted = await this.requestFilePermission('read', relativePath);
+				if (!permissionGranted) {
+					throw new Error('Permission denied to read file');
+				}
+			}
+
 			const file = this.app.vault.getAbstractFileByPath(relativePath);
 			if (!file) {
 				throw new Error(`File not found: ${relativePath}`);
@@ -251,6 +305,14 @@ export class ACPClient {
 
 	private async handleWriteTextFile(params: schema.WriteTextFileRequest): Promise<schema.WriteTextFileResponse> {
 		try {
+			// Request permission unless auto-approve is enabled
+			if (!this.settings.autoApprovePermissions) {
+				const permissionGranted = await this.requestFilePermission('write', params.path);
+				if (!permissionGranted) {
+					throw new Error('Permission denied to write file');
+				}
+			}
+
 			const file = this.app.vault.getAbstractFileByPath(params.path);
 			if (file) {
 				await this.app.vault.modify(file as any, params.content);

@@ -42,12 +42,12 @@ export class ACPClientSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Auto-approve Permissions')
-			.setDesc('Automatically approve all permission requests from the agent')
+			.setName('Auto-approve Write Permission')
+			.setDesc('Automatically approve file write/edit requests from the agent')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.autoApprovePermissions)
+				.setValue(this.plugin.settings.autoApproveWritePermission)
 				.onChange(async (value) => {
-					this.plugin.settings.autoApprovePermissions = value;
+					this.plugin.settings.autoApproveWritePermission = value;
 					await this.plugin.saveSettings();
 				}));
 

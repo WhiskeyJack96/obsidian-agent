@@ -1,7 +1,7 @@
 export interface ACPClientSettings {
 	agentCommand: string;
 	agentArgs: string[];
-	autoApprovePermissions: boolean;
+	autoApproveWritePermission: boolean;
 	autoApproveReadPermission: boolean;
 	defaultModel: string;
 }
@@ -9,7 +9,7 @@ export interface ACPClientSettings {
 export const DEFAULT_SETTINGS: ACPClientSettings = {
 	agentCommand: '',
 	agentArgs: [],
-	autoApprovePermissions: false,
+	autoApproveWritePermission: false,
 	autoApproveReadPermission: true,
 	defaultModel: ''
 };

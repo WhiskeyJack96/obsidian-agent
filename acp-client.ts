@@ -285,8 +285,8 @@ export class ACPClient {
 
 			console.log('Reading file:', { original: params.path, relative: relativePath, basePath });
 
-			// Request permission if auto-approve is not enabled for reads or globally
-			if (!this.settings.autoApproveReadPermission && !this.settings.autoApprovePermissions) {
+			// Request permission if auto-approve is not enabled for reads
+			if (!this.settings.autoApproveReadPermission) {
 				const permissionGranted = await this.requestFilePermission('read', relativePath);
 				if (!permissionGranted) {
 					throw new Error('Permission denied to read file');
@@ -318,8 +318,8 @@ export class ACPClient {
 
 			console.log('Writing file:', { original: params.path, relative: relativePath, basePath });
 
-			// Request permission unless auto-approve is enabled
-			if (!this.settings.autoApprovePermissions) {
+			// Request permission unless auto-approve is enabled for writes
+			if (!this.settings.autoApproveWritePermission) {
 				const permissionGranted = await this.requestFilePermission('write', relativePath);
 				if (!permissionGranted) {
 					throw new Error('Permission denied to write file');
@@ -341,15 +341,6 @@ export class ACPClient {
 
 	private async handleRequestPermission(params: schema.RequestPermissionRequest): Promise<schema.RequestPermissionResponse> {
 		console.log('Permission requested:', params);
-
-		if (this.settings.autoApprovePermissions && params.options && params.options.length > 0) {
-			return {
-				outcome: {
-					outcome: 'selected',
-					optionId: params.options[0].optionId
-				}
-			};
-		}
 
 		// Send permission request to UI for inline approval
 		if (this.updateCallback && params.options && params.options.length > 0) {

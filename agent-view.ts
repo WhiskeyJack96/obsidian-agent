@@ -177,6 +177,9 @@ export class AgentView extends ItemView {
 		await this.client.cleanup();
 		this.clearMessages();
 
+		// Reset status so connect() will proceed
+		this.statusIndicator.setText('Not connected');
+
 		// Reconnect
 		await this.connect();
 	}

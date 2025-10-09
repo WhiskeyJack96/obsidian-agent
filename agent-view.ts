@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Notice } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice, MarkdownRenderer, Component } from 'obsidian';
 import { ACPClient, SessionUpdate } from './acp-client';
 
 export const VIEW_TYPE_AGENT = 'acp-agent-view';
@@ -9,6 +9,7 @@ export class AgentView extends ItemView {
 	private inputContainer: HTMLElement;
 	private inputField: HTMLTextAreaElement;
 	private statusIndicator: HTMLElement;
+	private component: Component;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -30,6 +31,10 @@ export class AgentView extends ItemView {
 		const container = this.containerEl.children[1];
 		container.empty();
 		container.addClass('acp-agent-view');
+
+		// Initialize component for markdown rendering
+		this.component = new Component();
+		this.component.load();
 
 		// Create status bar
 		this.statusIndicator = container.createDiv({ cls: 'acp-status' });
@@ -189,15 +194,28 @@ export class AgentView extends ItemView {
 	}
 
 	private lastAgentMessage: HTMLElement | null = null;
+	private lastAgentMessageText: string = '';
 	private toolCallElements: Map<string, HTMLElement> = new Map();
 	private toolCallCache: Map<string, { title?: string; rawInput?: any; kind?: string }> = new Map();
 
-	private appendToLastAgentMessage(content: any): void {
+	private async appendToLastAgentMessage(content: any): Promise<void> {
 		if (content.type === 'text' && content.text) {
 			if (!this.lastAgentMessage) {
 				this.lastAgentMessage = this.createAgentMessage();
+				this.lastAgentMessageText = '';
 			}
-			this.lastAgentMessage.appendText(content.text);
+			// Accumulate text
+			this.lastAgentMessageText += content.text;
+
+			// Clear and re-render with markdown
+			this.lastAgentMessage.empty();
+			await MarkdownRenderer.renderMarkdown(
+				this.lastAgentMessageText,
+				this.lastAgentMessage,
+				'',
+				this.component
+			);
+
 			this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
 		}
 	}
@@ -230,6 +248,7 @@ export class AgentView extends ItemView {
 
 	private handleToolCallUpdate(updateData: any): void {
 		this.lastAgentMessage = null; // End current message
+		this.lastAgentMessageText = '';
 
 		const toolCallId = updateData.toolCallId;
 		// Get cached permission details if available
@@ -388,6 +407,7 @@ export class AgentView extends ItemView {
 
 	private showPermissionRequest(params: any, resolve: (response: any) => void): void {
 		this.lastAgentMessage = null;
+		this.lastAgentMessageText = '';
 
 		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-permission' });
 		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
@@ -439,8 +459,9 @@ export class AgentView extends ItemView {
 		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
 	}
 
-	private showPlan(plan: any): void {
+	private async showPlan(plan: any): Promise<void> {
 		this.lastAgentMessage = null;
+		this.lastAgentMessageText = '';
 
 		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-plan' });
 		const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
@@ -448,13 +469,16 @@ export class AgentView extends ItemView {
 
 		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
 
+		let planText: string;
 		if (typeof plan === 'string') {
-			contentEl.setText(plan);
+			planText = plan;
 		} else if (plan.description) {
-			contentEl.setText(plan.description);
+			planText = plan.description;
 		} else {
-			contentEl.setText(JSON.stringify(plan, null, 2));
+			planText = '```json\n' + JSON.stringify(plan, null, 2) + '\n```';
 		}
+
+		await MarkdownRenderer.renderMarkdown(planText, contentEl, '', this.component);
 
 		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
 	}
@@ -481,10 +505,11 @@ export class AgentView extends ItemView {
 		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
 	}
 
-	addMessage(sender: 'user' | 'agent' | 'system', content: string): void {
+	async addMessage(sender: 'user' | 'agent' | 'system', content: string): Promise<void> {
 		// Reset last agent message tracker when adding a new message
 		if (sender === 'user' || sender === 'system') {
 			this.lastAgentMessage = null;
+			this.lastAgentMessageText = '';
 		}
 
 		const messageEl = this.messagesContainer.createDiv({ cls: `acp-message acp-message-${sender}` });
@@ -493,10 +518,18 @@ export class AgentView extends ItemView {
 		senderEl.setText(sender.charAt(0).toUpperCase() + sender.slice(1));
 
 		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
-		contentEl.setText(content);
+
+		// Render markdown for user and agent messages
+		if (sender === 'user' || sender === 'agent') {
+			await MarkdownRenderer.renderMarkdown(content, contentEl, '', this.component);
+		} else {
+			// System messages remain as plain text
+			contentEl.setText(content);
+		}
 
 		if (sender === 'agent') {
 			this.lastAgentMessage = contentEl;
+			this.lastAgentMessageText = content;
 		}
 
 		// Scroll to bottom
@@ -506,6 +539,9 @@ export class AgentView extends ItemView {
 	async onClose(): Promise<void> {
 		if (this.client) {
 			this.client.cleanup();
+		}
+		if (this.component) {
+			this.component.unload();
 		}
 	}
 }

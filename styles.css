@@ -34,24 +34,30 @@
 	padding: 10px;
 	border-radius: 6px;
 	background-color: var(--background-secondary);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .acp-message-user {
 	background-color: var(--interactive-accent);
 	color: var(--text-on-accent);
 	margin-left: 20%;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .acp-message-agent {
 	background-color: var(--background-secondary);
 	margin-right: 20%;
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .acp-message-system {
-	background-color: var(--background-modifier-success);
+	background-color: var(--background-secondary-alt);
+	border: 1px solid var(--background-modifier-border);
 	text-align: center;
 	font-style: italic;
-	opacity: 0.8;
+	opacity: 0.9;
+	color: var(--text-muted);
 }
 
 .acp-message-sender {

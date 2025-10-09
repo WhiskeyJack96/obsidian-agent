@@ -291,7 +291,7 @@ export class AgentView extends ItemView {
 		// Try to extract meaningful info from rawInput
 		const rawInput = updateData.rawInput;
 		const kind = updateData.kind;
-
+		console.log(updateData)
 		if (rawInput) {
 			// File operations
 			if (rawInput.path) {

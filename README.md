@@ -14,6 +14,7 @@ COMING SOON! If you get this working let me know and we can tag team the docs :D
 
 ## Features
 
+![](./demo.gif)
 
 - **ACP Client Implementation**: Full implementation of the Agent Client Protocol specification
 - **Agent Communication**: Connect to and interact with ACP-compatible agents

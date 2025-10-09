@@ -14,6 +14,8 @@ COMING SOON! If you get this working let me know and we can tag team the docs :D
 
 ## Features
 
+![](demos/demo.mov)
+
 - **ACP Client Implementation**: Full implementation of the Agent Client Protocol specification
 - **Agent Communication**: Connect to and interact with ACP-compatible agents
 - **File System Access**: Agents can read and write files in your vault (with permission)

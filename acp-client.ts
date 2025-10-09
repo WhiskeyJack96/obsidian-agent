@@ -282,14 +282,6 @@ export class ACPClient {
 
 			console.log('Reading file:', { original: params.path, relative: relativePath, basePath });
 
-			// Request permission unless auto-approve is enabled
-			if (!this.settings.autoApprovePermissions) {
-				const permissionGranted = await this.requestFilePermission('read', relativePath);
-				if (!permissionGranted) {
-					throw new Error('Permission denied to read file');
-				}
-			}
-
 			const file = this.app.vault.getAbstractFileByPath(relativePath);
 			if (!file) {
 				throw new Error(`File not found: ${relativePath}`);

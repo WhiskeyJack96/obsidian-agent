@@ -190,6 +190,7 @@ export class AgentView extends ItemView {
 
 	private lastAgentMessage: HTMLElement | null = null;
 	private toolCallElements: Map<string, HTMLElement> = new Map();
+	private toolCallCache: Map<string, { title?: string; rawInput?: any; kind?: string }> = new Map();
 
 	private appendToLastAgentMessage(content: any): void {
 		if (content.type === 'text' && content.text) {
@@ -231,7 +232,22 @@ export class AgentView extends ItemView {
 		this.lastAgentMessage = null; // End current message
 
 		const toolCallId = updateData.toolCallId;
-
+		// Get cached permission details if available
+		const cachedDetails = toolCallId ? this.toolCallCache.get(toolCallId) : null;
+ 
+		// Merge cached details with update data (update data takes precedence)
+		const mergedData = {
+			...cachedDetails,
+			...updateData,
+			// Preserve cached rawInput if updateData doesn't have it
+			rawInput: updateData.rawInput || cachedDetails?.rawInput
+		};
+		if (mergedData.status == "completed") {
+			this.toolCallCache.delete(toolCallId)
+		} else {
+			this.toolCallCache.set(toolCallId, mergedData)
+		}
+				
 		// Check if we already have a message for this tool call
 		let messageEl = toolCallId ? this.toolCallElements.get(toolCallId) : null;
 
@@ -256,12 +272,8 @@ export class AgentView extends ItemView {
 		// Compact header with tool info and status
 		const toolHeader = contentEl.createDiv({ cls: 'acp-tool-compact-header' });
 
-		// Icon based on kind
-		const icon = this.getToolIcon(updateData.kind);
-		const iconEl = toolHeader.createSpan({ cls: 'acp-tool-icon', text: icon });
-
-		// Generate descriptive title
-		const titleText = this.generateToolTitle(updateData);
+		// Generate descriptive title using merged data
+		const titleText = this.generateToolTitle(mergedData);
 		toolHeader.createSpan({ text: titleText, cls: 'acp-tool-title' });
 
 		// Show tool status badge if available

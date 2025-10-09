@@ -284,8 +284,8 @@ export class AgentView extends ItemView {
 	}
 
 	private showAvailableCommands(commands: any[]): void {
-		// Store commands for autocomplete
-		this.availableCommands = commands;
+		// Store commands for autocomplete, minus those that don't make sense in obsidian
+		this.availableCommands = commands.filter((x) => !["pr-comments", "review", "security-review"].contains(x.name));
 
 		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-system' });
 		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
@@ -293,7 +293,7 @@ export class AgentView extends ItemView {
 		contentEl.createEl('strong', { text: 'Available Commands:' });
 		const commandList = contentEl.createEl('ul', { cls: 'acp-command-list' });
 
-		for (const cmd of commands) {
+		for (const cmd of this.availableCommands) {
 			const item = commandList.createEl('li');
 			item.createEl('code', { text: `/${cmd.name}`, cls: 'acp-command-name' });
 			if (cmd.description) {

@@ -52,6 +52,16 @@ export class ACPClientSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+			.setName('Auto-approve Read Permission')
+			.setDesc('Automatically approve file read requests from the agent')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.autoApproveReadPermission)
+				.onChange(async (value) => {
+					this.plugin.settings.autoApproveReadPermission = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
 			.setName('Default Model')
 			.setDesc('Default model to use for new sessions (leave empty for agent default)')
 			.addText(text => text

@@ -5,7 +5,6 @@ import { ReadableStream, WritableStream } from 'stream/web';
 import { App, Notice } from 'obsidian';
 import { ACPClientSettings } from './settings';
 import * as schema from '@zed-industries/agent-client-protocol';
-import { PermissionModal } from './permission-modal';
 
 export interface SessionUpdate {
 	type: 'message' | 'tool_call' | 'plan' | 'mode_change' | 'permission_request';
@@ -281,6 +280,14 @@ export class ACPClient {
 			}
 
 			console.log('Reading file:', { original: params.path, relative: relativePath, basePath });
+
+			// Request permission if auto-approve is not enabled for reads or globally
+			if (!this.settings.autoApproveReadPermission && !this.settings.autoApprovePermissions) {
+				const permissionGranted = await this.requestFilePermission('read', relativePath);
+				if (!permissionGranted) {
+					throw new Error('Permission denied to read file');
+				}
+			}
 
 			const file = this.app.vault.getAbstractFileByPath(relativePath);
 			if (!file) {

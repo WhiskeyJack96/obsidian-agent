@@ -114,6 +114,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+	position: relative;
 }
 
 .acp-input {
@@ -411,4 +412,55 @@
 
 .acp-collapsed {
 	display: none;
+}
+
+/* Autocomplete */
+.acp-autocomplete {
+	position: absolute;
+	bottom: 100%;
+	left: 0;
+	right: 0;
+	margin-bottom: 4px;
+	background-color: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	max-height: 200px;
+	overflow-y: auto;
+	z-index: 1000;
+}
+
+.acp-autocomplete-item {
+	padding: 8px 12px;
+	cursor: pointer;
+	transition: background-color 0.1s;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.acp-autocomplete-item:last-child {
+	border-bottom: none;
+}
+
+.acp-autocomplete-item:hover,
+.acp-autocomplete-item.selected {
+	background-color: var(--background-modifier-hover);
+}
+
+.acp-autocomplete-item-name {
+	font-weight: 600;
+	color: var(--interactive-accent);
+	font-family: var(--font-monospace);
+}
+
+.acp-autocomplete-item-description {
+	font-size: 0.85em;
+	color: var(--text-muted);
+	margin-top: 2px;
+}
+
+.acp-autocomplete-item-path {
+	font-size: 0.8em;
+	color: var(--text-faint);
+	font-family: var(--font-monospace);
+	margin-top: 2px;
 }

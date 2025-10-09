@@ -29,7 +29,7 @@ COMING SOON! If you get this working let me know and we can tag team the docs :D
 
 ## ⚠️ Security Warning
 
-> [!warning] Carefully Inspect Bash Commands
+> [!CAUTION] Carefully Inspect Bash Commands
 > AI agents can execute terminal commands on your system through this plugin. **Always carefully review and understand any bash commands before approving them.** Commands run with the same permissions as Obsidian and can modify files, install software, or access your system. When in doubt, deny permission requests and manually execute commands yourself.
 
 ## Installation

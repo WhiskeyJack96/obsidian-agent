@@ -39,13 +39,13 @@ export class AgentView extends ItemView {
 		this.component = new Component();
 		this.component.load();
 
-		// Create status bar
-		this.statusIndicator = container.createDiv({ cls: 'acp-status' });
+		// Create status bar container with status text and new conversation button
+		const statusBarContainer = container.createDiv({ cls: 'acp-status-bar-container' });
+
+		this.statusIndicator = statusBarContainer.createDiv({ cls: 'acp-status' });
 		this.statusIndicator.setText('Not connected');
 
-		// Add new conversation button at the top
-		const topButtonContainer = container.createDiv({ cls: 'acp-top-button-container' });
-		const newConversationButton = topButtonContainer.createEl('button', {
+		const newConversationButton = statusBarContainer.createEl('button', {
 			cls: 'acp-new-conversation-button',
 			text: 'New Conversation'
 		});
@@ -126,8 +126,6 @@ export class AgentView extends ItemView {
 
 			await this.client.createSession();
 			this.statusIndicator.setText('Session active');
-
-			this.addMessage('system', 'Connected to agent. You can now send messages.');
 		} catch (err) {
 			this.statusIndicator.setText('Connection failed');
 			new Notice(`Failed to connect: ${err.message}`);

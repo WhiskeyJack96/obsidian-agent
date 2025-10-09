@@ -17,6 +17,11 @@ export default class ACPClientPlugin extends Plugin {
 			(leaf) => new AgentView(leaf)
 		);
 
+		// Initialize client for any existing agent views (from restored workspace)
+		this.app.workspace.onLayoutReady(() => {
+			this.initializeExistingViews();
+		});
+
 		// Add ribbon icon
 		this.addRibbonIcon('bot', 'Open ACP Agent', () => {
 			this.activateView();
@@ -69,6 +74,23 @@ export default class ACPClientPlugin extends Plugin {
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_AGENT);
 	}
 
+	initializeExistingViews() {
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AGENT);
+		for (const leaf of leaves) {
+			const view = leaf.view as AgentView;
+			if (view) {
+				this.ensureClientForView(view);
+			}
+		}
+	}
+
+	ensureClientForView(view: AgentView) {
+		if (!this.client) {
+			this.client = new ACPClient(this.app, this.settings);
+		}
+		view.setClient(this.client);
+	}
+
 	async activateView() {
 		const { workspace } = this.app;
 
@@ -95,11 +117,8 @@ export default class ACPClientPlugin extends Plugin {
 		// Initialize client for the view
 		if (leaf) {
 			const view = leaf.view as AgentView;
-			if (view && !this.client) {
-				this.client = new ACPClient(this.app, this.settings);
-				view.setClient(this.client);
-			} else if (view && this.client) {
-				view.setClient(this.client);
+			if (view) {
+				this.ensureClientForView(view);
 			}
 		}
 	}

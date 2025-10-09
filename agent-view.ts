@@ -117,13 +117,22 @@ export class AgentView extends ItemView {
 		this.client.setUpdateCallback((update: SessionUpdate) => {
 			this.handleUpdate(update);
 		});
-		// Auto-connect when client is set
-		this.connect();
+		// Auto-connect when client is set (but only if not already connected)
+		if (this.statusIndicator.getText() === 'Not connected') {
+			this.connect();
+		}
 	}
 
 	async connect(): Promise<void> {
 		if (!this.client) {
 			new Notice('Client not initialized');
+			return;
+		}
+
+		// Don't connect if already connected or connecting
+		const currentStatus = this.statusIndicator.getText();
+		if (currentStatus === 'Connecting...' || currentStatus === 'Connected' || currentStatus === 'Session active') {
+			console.log('Already connected or connecting, skipping connect()');
 			return;
 		}
 

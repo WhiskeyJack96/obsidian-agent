@@ -26,6 +26,8 @@
 	background-color: var(--background-primary);
 	border-radius: 4px;
 	border: 1px solid var(--background-modifier-border);
+	user-select: text;
+	cursor: text;
 }
 
 /* Individual Message */
@@ -42,6 +44,11 @@
 	color: var(--text-on-accent);
 	margin-left: 20%;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.acp-message-user ::selection {
+	background-color: rgba(255, 255, 255, 0.3);
+	color: var(--text-on-accent);
 }
 
 .acp-message-agent {
@@ -71,6 +78,8 @@
 .acp-message-content {
 	line-height: 1.5;
 	word-wrap: break-word;
+	user-select: text;
+	cursor: text;
 }
 
 .acp-message-content pre {
@@ -247,6 +256,8 @@
 	max-height: 200px;
 	overflow-y: auto;
 	line-height: 1.4;
+	user-select: text;
+	cursor: text;
 }
 
 .acp-tool-output-compact pre {

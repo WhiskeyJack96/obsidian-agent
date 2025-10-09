@@ -1,9 +1,11 @@
 import { ItemView, WorkspaceLeaf, Notice, MarkdownRenderer, Component } from 'obsidian';
 import { ACPClient, SessionUpdate } from './acp-client';
+import type ACPClientPlugin from './main';
 
 export const VIEW_TYPE_AGENT = 'acp-agent-view';
 
 export class AgentView extends ItemView {
+	private plugin: ACPClientPlugin;
 	private client: ACPClient | null = null;
 	private messagesContainer: HTMLElement;
 	private inputContainer: HTMLElement;
@@ -14,8 +16,9 @@ export class AgentView extends ItemView {
 	private autocompleteContainer: HTMLElement | null = null;
 	private autocompleteSelectedIndex: number = -1;
 
-	constructor(leaf: WorkspaceLeaf) {
+	constructor(leaf: WorkspaceLeaf, plugin: ACPClientPlugin) {
 		super(leaf);
+		this.plugin = plugin;
 	}
 
 	getViewType(): string {
@@ -102,6 +105,11 @@ export class AgentView extends ItemView {
 		this.inputField.addEventListener('input', () => {
 			this.handleAutocomplete();
 		});
+
+		// Ensure client is initialized when view opens (after all UI elements are created)
+		if (!this.client) {
+			this.plugin.ensureClientForView(this);
+		}
 	}
 
 	setClient(client: ACPClient): void {

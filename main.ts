@@ -14,7 +14,7 @@ export default class ACPClientPlugin extends Plugin {
 		// Register the agent view
 		this.registerView(
 			VIEW_TYPE_AGENT,
-			(leaf) => new AgentView(leaf)
+			(leaf) => new AgentView(leaf, this)
 		);
 
 		// Initialize client for any existing agent views (from restored workspace)

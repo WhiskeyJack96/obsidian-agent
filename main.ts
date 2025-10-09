@@ -55,7 +55,7 @@ export default class ACPClientPlugin extends Plugin {
 			callback: async () => {
 				const view = await this.getAgentView();
 				if (view) {
-					view.disconnect();
+					await view.disconnect();
 				}
 			}
 		});
@@ -67,7 +67,7 @@ export default class ACPClientPlugin extends Plugin {
 	async onunload() {
 		// Clean up client
 		if (this.client) {
-			this.client.cleanup();
+			await this.client.cleanup();
 		}
 
 		// Detach all agent views

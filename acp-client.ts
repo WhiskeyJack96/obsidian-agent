@@ -67,7 +67,11 @@ export class ACPClient {
 
 		this.process.on('exit', (code) => {
 			console.log(`Agent process exited with code ${code}`);
-			this.cleanup();
+			// Note: This handler is removed during intentional cleanup to prevent race conditions
+			// It only fires when the process exits unexpectedly
+			this.cleanup().catch((err) => {
+				console.error('Error during cleanup after unexpected process exit:', err);
+			});
 		});
 
 		// Convert Node.js streams to Web Streams
@@ -485,21 +489,34 @@ export class ACPClient {
 		});
 	}
 
-	cleanup(): void {
-		// Clean up terminals
-		for (const terminal of this.terminals.values()) {
-			terminal.kill();
-		}
-		this.terminals.clear();
-		this.terminalOutputs.clear();
+	cleanup(): Promise<void> {
+		return new Promise((resolve) => {
+			// Clean up terminals
+			for (const terminal of this.terminals.values()) {
+				terminal.kill();
+			}
+			this.terminals.clear();
+			this.terminalOutputs.clear();
 
-		// Kill agent process
-		if (this.process) {
-			this.process.kill();
-			this.process = null;
-		}
+			// Kill agent process
+			if (this.process) {
+				// Remove the exit handler to prevent it from calling cleanup again
+				this.process.removeAllListeners('exit');
 
-		this.connection = null;
-		this.sessionId = null;
+				// Wait for the process to exit before cleaning up references
+				this.process.on('exit', () => {
+					this.process = null;
+					this.connection = null;
+					this.sessionId = null;
+					resolve();
+				});
+
+				this.process.kill();
+			} else {
+				this.connection = null;
+				this.sessionId = null;
+				resolve();
+			}
+		});
 	}
 }

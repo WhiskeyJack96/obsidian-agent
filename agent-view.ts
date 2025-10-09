@@ -141,9 +141,9 @@ export class AgentView extends ItemView {
 		}
 	}
 
-	disconnect(): void {
+	async disconnect(): Promise<void> {
 		if (this.client) {
-			this.client.cleanup();
+			await this.client.cleanup();
 			this.statusIndicator.setText('Disconnected');
 			this.addMessage('system', 'Disconnected from agent.');
 		}
@@ -155,6 +155,7 @@ export class AgentView extends ItemView {
 		this.lastAgentMessageText = '';
 		this.toolCallElements.clear();
 		this.toolCallCache.clear();
+		this.commandsMessageElement = null;
 	}
 
 	async newConversation(): Promise<void> {
@@ -164,7 +165,7 @@ export class AgentView extends ItemView {
 		}
 
 		// Clean up current session
-		this.client.cleanup();
+		await this.client.cleanup();
 		this.clearMessages();
 
 		// Reconnect
@@ -252,6 +253,7 @@ export class AgentView extends ItemView {
 	private lastAgentMessageText: string = '';
 	private toolCallElements: Map<string, HTMLElement> = new Map();
 	private toolCallCache: Map<string, { title?: string; rawInput?: any; kind?: string }> = new Map();
+	private commandsMessageElement: HTMLElement | null = null;
 
 	private async appendToLastAgentMessage(content: any): Promise<void> {
 		if (content.type === 'text' && content.text) {
@@ -287,8 +289,19 @@ export class AgentView extends ItemView {
 		// Store commands for autocomplete, minus those that don't make sense in obsidian
 		this.availableCommands = commands.filter((x) => !["pr-comments", "review", "security-review"].contains(x.name));
 
-		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-system' });
-		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+		// Reuse existing commands message element if it exists
+		let messageEl: HTMLElement;
+		let contentEl: HTMLElement;
+
+		if (this.commandsMessageElement) {
+			messageEl = this.commandsMessageElement;
+			contentEl = messageEl.querySelector('.acp-message-content') as HTMLElement;
+			contentEl.empty();
+		} else {
+			messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-system' });
+			contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+			this.commandsMessageElement = messageEl;
+		}
 
 		contentEl.createEl('strong', { text: 'Available Commands:' });
 		const commandList = contentEl.createEl('ul', { cls: 'acp-command-list' });
@@ -596,7 +609,7 @@ export class AgentView extends ItemView {
 
 	async onClose(): Promise<void> {
 		if (this.client) {
-			this.client.cleanup();
+			await this.client.cleanup();
 		}
 		if (this.component) {
 			this.component.unload();

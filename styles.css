@@ -464,3 +464,29 @@
 	font-family: var(--font-monospace);
 	margin-top: 2px;
 }
+
+/* Top Button Container */
+.acp-top-button-container {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 10px;
+}
+
+.acp-new-conversation-button {
+	padding: 8px 16px;
+	border: none;
+	border-radius: 4px;
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-weight: 500;
+	cursor: pointer;
+	transition: opacity 0.2s;
+}
+
+.acp-new-conversation-button:hover {
+	opacity: 0.8;
+}
+
+.acp-new-conversation-button:active {
+	opacity: 0.6;
+}

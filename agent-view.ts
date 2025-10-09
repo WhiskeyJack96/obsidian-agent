@@ -43,6 +43,14 @@ export class AgentView extends ItemView {
 		this.statusIndicator = container.createDiv({ cls: 'acp-status' });
 		this.statusIndicator.setText('Not connected');
 
+		// Add new conversation button at the top
+		const topButtonContainer = container.createDiv({ cls: 'acp-top-button-container' });
+		const newConversationButton = topButtonContainer.createEl('button', {
+			cls: 'acp-new-conversation-button',
+			text: 'New Conversation'
+		});
+		newConversationButton.addEventListener('click', () => this.newConversation());
+
 		// Create messages container
 		this.messagesContainer = container.createDiv({ cls: 'acp-messages' });
 
@@ -94,23 +102,6 @@ export class AgentView extends ItemView {
 		this.inputField.addEventListener('input', () => {
 			this.handleAutocomplete();
 		});
-
-		// Add control buttons
-		const buttonContainer = this.inputContainer.createDiv({ cls: 'acp-button-container' });
-
-		const connectButton = buttonContainer.createEl('button', {
-			cls: 'acp-control-button',
-			text: 'Connect'
-		});
-
-		connectButton.addEventListener('click', () => this.connect());
-
-		const disconnectButton = buttonContainer.createEl('button', {
-			cls: 'acp-control-button',
-			text: 'Disconnect'
-		});
-
-		disconnectButton.addEventListener('click', () => this.disconnect());
 	}
 
 	setClient(client: ACPClient): void {
@@ -118,6 +109,8 @@ export class AgentView extends ItemView {
 		this.client.setUpdateCallback((update: SessionUpdate) => {
 			this.handleUpdate(update);
 		});
+		// Auto-connect when client is set
+		this.connect();
 	}
 
 	async connect(): Promise<void> {
@@ -148,6 +141,28 @@ export class AgentView extends ItemView {
 			this.statusIndicator.setText('Disconnected');
 			this.addMessage('system', 'Disconnected from agent.');
 		}
+	}
+
+	clearMessages(): void {
+		this.messagesContainer.empty();
+		this.lastAgentMessage = null;
+		this.lastAgentMessageText = '';
+		this.toolCallElements.clear();
+		this.toolCallCache.clear();
+	}
+
+	async newConversation(): Promise<void> {
+		if (!this.client) {
+			new Notice('Client not initialized');
+			return;
+		}
+
+		// Clean up current session
+		this.client.cleanup();
+		this.clearMessages();
+
+		// Reconnect
+		await this.connect();
 	}
 
 	async sendMessage(): Promise<void> {

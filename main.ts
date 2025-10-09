@@ -78,13 +78,18 @@ export default class ACPClientPlugin extends Plugin {
 		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AGENT);
 		for (const leaf of leaves) {
 			const view = leaf.view as AgentView;
-			if (view) {
+			// Only initialize if view is fully loaded and has setClient method
+			if (view && typeof view.setClient === 'function') {
 				this.ensureClientForView(view);
 			}
 		}
 	}
 
 	ensureClientForView(view: AgentView) {
+		// Check if view is ready before setting client
+		if (typeof view.setClient !== 'function') {
+			return;
+		}
 		if (!this.client) {
 			this.client = new ACPClient(this.app, this.settings);
 		}

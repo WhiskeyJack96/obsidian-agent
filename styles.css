@@ -757,3 +757,21 @@
 	background-color: var(--text-muted);
 	color: var(--text-on-accent);
 }
+
+/* Alpha Setting Warning */
+.acp-setting-alpha {
+	background-color: rgba(255, 193, 7, 0.1);
+	border-left: 3px solid #ffc107;
+	padding: 12px;
+	border-radius: 4px;
+}
+
+.acp-alpha-warning {
+	color: #ffc107;
+	font-weight: 600;
+	margin-top: 8px;
+	font-size: 0.85em;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}

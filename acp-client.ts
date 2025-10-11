@@ -5,6 +5,7 @@ import { ReadableStream, WritableStream } from 'stream/web';
 import { App, Notice } from 'obsidian';
 import { ACPClientSettings } from './settings';
 import * as schema from '@zed-industries/agent-client-protocol';
+import { readFile, readFileSync } from 'fs';
 
 export interface SessionModeState {
 	currentModeId: string;
@@ -44,7 +45,7 @@ export class ACPClient {
 		// Spawn the agent process
 		// If the command is a Node.js script, run it with node explicitly
 		const isNodeScript = this.settings.agentCommand.endsWith('.js') ||
-							 this.settings.agentCommand.includes('node_modules');
+			this.settings.agentCommand.includes('node_modules');
 
 		let command: string;
 		let args: string[];
@@ -159,9 +160,16 @@ export class ACPClient {
 		if (this.settings.debug) {
 			console.log('Creating session with cwd:', basePath);
 		}
+		let systemPrompt = undefined
+		if (this.settings.obsidianFocussedPrompt) {
+			systemPrompt = readFileSync("prompt.md")
+		}
 
 		const response = await this.connection.newSession({
 			cwd: basePath,
+			_meta: {
+				systemPrompt
+			},
 			mcpServers: []
 		});
 
@@ -349,7 +357,7 @@ export class ACPClient {
 					params: permissionParams,
 					resolve: (response: schema.RequestPermissionResponse) => {
 						const granted = response.outcome?.outcome === 'selected' &&
-									   response.outcome?.optionId === 'allow';
+							response.outcome?.optionId === 'allow';
 						resolve(granted);
 					}
 				}

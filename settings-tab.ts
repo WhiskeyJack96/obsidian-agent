@@ -81,5 +81,22 @@ export class ACPClientSettingTab extends PluginSettingTab {
 					this.plugin.settings.debug = value;
 					await this.plugin.saveSettings();
 				}));
+
+		// Alpha feature warning
+		const alphaSettingEl = new Setting(containerEl)
+			.setName('Obsidian Focussed Prompt')
+			.setDesc('Enable Obsidian-specific context in agent prompts')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.obsidianFocussedPrompt)
+				.onChange(async (value) => {
+					this.plugin.settings.obsidianFocussedPrompt = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// Add alpha warning styling
+		alphaSettingEl.settingEl.addClass('acp-setting-alpha');
+		const alphaWarning = alphaSettingEl.descEl.createDiv();
+		alphaWarning.addClass('acp-alpha-warning');
+		alphaWarning.setText('⚠️ ALPHA: This feature is experimental and may change');
 	}
 }

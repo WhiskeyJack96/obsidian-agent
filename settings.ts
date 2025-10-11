@@ -5,6 +5,7 @@ export interface ACPClientSettings {
 	autoApproveReadPermission: boolean;
 	defaultModel: string;
 	debug: boolean;
+	obsidianFocussedPrompt: boolean;
 }
 
 export const DEFAULT_SETTINGS: ACPClientSettings = {
@@ -13,5 +14,6 @@ export const DEFAULT_SETTINGS: ACPClientSettings = {
 	autoApproveWritePermission: false,
 	autoApproveReadPermission: true,
 	defaultModel: '',
-	debug: false
+	debug: false,
+	obsidianFocussedPrompt: false
 };

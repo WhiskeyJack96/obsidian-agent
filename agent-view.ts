@@ -12,6 +12,7 @@ export class AgentView extends ItemView {
 	private inputField: HTMLTextAreaElement;
 	private statusIndicator: HTMLElement;
 	private cancelButton: HTMLElement;
+	private modeSelector: HTMLSelectElement | null = null;
 	private component: Component;
 	private availableCommands: Array<{name: string; description?: string}> = [];
 	private autocompleteContainer: HTMLElement | null = null;
@@ -48,6 +49,13 @@ export class AgentView extends ItemView {
 
 		this.statusIndicator = statusBarContainer.createDiv({ cls: 'acp-status' });
 		this.statusIndicator.setText('Not connected');
+
+		// Create mode selector dropdown
+		this.modeSelector = statusBarContainer.createEl('select', {
+			cls: 'acp-mode-selector'
+		});
+		this.modeSelector.disabled = true; // Initially disabled until session is created
+		this.modeSelector.addEventListener('change', () => this.handleModeChange());
 
 		const newConversationButton = statusBarContainer.createEl('button', {
 			cls: 'acp-new-conversation-button',
@@ -176,6 +184,12 @@ export class AgentView extends ItemView {
 		this.toolCallCache.clear();
 		this.commandsMessageElement = null;
 		this.pendingMessage = null;
+
+		// Reset mode selector
+		if (this.modeSelector) {
+			this.modeSelector.empty();
+			this.modeSelector.disabled = true;
+		}
 	}
 
 	async newConversation(): Promise<void> {
@@ -250,6 +264,12 @@ export class AgentView extends ItemView {
 			return;
 		}
 
+		// Handle mode changes - update UI
+		if (update.type === 'mode_change') {
+			this.updateModeSelector(data);
+			return;
+		}
+
 		// Handle permission requests specially
 		if (update.type === 'permission_request') {
 			this.showPermissionRequest(data.params, data.resolve);
@@ -291,8 +311,8 @@ export class AgentView extends ItemView {
 				this.showPlan(updateData.plan);
 			}
 			// Handle current mode updates
-			else if (updateType === 'current_mode_update' && updateData.currentMode) {
-				this.showModeChange(updateData.currentMode);
+			else if (updateType === 'current_mode_update' && updateData.currentModeId) {
+				this.updateCurrentMode(updateData.currentModeId);
 			}
 			// Fallback: show as formatted JSON for debugging
 			else {
@@ -667,6 +687,95 @@ export class AgentView extends ItemView {
 
 		// Ensure pending message stays at bottom
 		this.ensurePendingAtBottom();
+	}
+
+	private updateModeSelector(modeState: any): void {
+		if (!this.modeSelector || !modeState) {
+			return;
+		}
+
+		// Clear existing options
+		this.modeSelector.empty();
+
+		// Add options for each available mode
+		for (const mode of modeState.availableModes) {
+			const option = this.modeSelector.createEl('option', {
+				value: mode.id,
+				text: mode.name
+			});
+
+			// Set tooltip with description if available
+			if (mode.description) {
+				option.title = mode.description;
+			}
+		}
+
+		// Set current mode
+		this.modeSelector.value = modeState.currentModeId;
+
+		// Enable the selector
+		this.modeSelector.disabled = false;
+
+		if (this.plugin.settings.debug) {
+			console.log('Mode selector updated:', modeState);
+		}
+	}
+
+	private updateCurrentMode(modeId: string): void {
+		if (!this.modeSelector) {
+			return;
+		}
+
+		// Update the dropdown selection
+		this.modeSelector.value = modeId;
+
+		// Update the client's internal state
+		if (this.client) {
+			const modeState = this.client.getModeState();
+			if (modeState) {
+				modeState.currentModeId = modeId;
+
+				// Find the mode name for display
+				const mode = modeState.availableModes.find(m => m.id === modeId);
+				if (mode) {
+					this.showModeChange(mode);
+				}
+			}
+		}
+
+		if (this.plugin.settings.debug) {
+			console.log('Current mode updated to:', modeId);
+		}
+	}
+
+	private async handleModeChange(): Promise<void> {
+		if (!this.modeSelector || !this.client) {
+			return;
+		}
+
+		const selectedModeId = this.modeSelector.value;
+		const modeState = this.client.getModeState();
+
+		if (!modeState || modeState.currentModeId === selectedModeId) {
+			// No change or no mode state
+			return;
+		}
+
+		try {
+			await this.client.setMode(selectedModeId);
+
+			// Find the mode name for display message
+			const mode = modeState.availableModes.find(m => m.id === selectedModeId);
+			if (mode) {
+				this.showModeChange(mode);
+			}
+		} catch (err) {
+			new Notice(`Failed to change mode: ${err.message}`);
+			console.error('Mode change error:', err);
+
+			// Revert dropdown to previous value
+			this.modeSelector.value = modeState.currentModeId;
+		}
 	}
 
 	private showDebugMessage(data: any): void {

@@ -6,6 +6,11 @@ import { App, Notice } from 'obsidian';
 import { ACPClientSettings } from './settings';
 import * as schema from '@zed-industries/agent-client-protocol';
 
+export interface SessionModeState {
+	currentModeId: string;
+	availableModes: schema.SessionMode[];
+}
+
 export interface SessionUpdate {
 	type: 'message' | 'tool_call' | 'plan' | 'mode_change' | 'permission_request' | 'turn_complete';
 	data: any;
@@ -20,6 +25,7 @@ export class ACPClient {
 	private terminals: Map<string, ChildProcess> = new Map();
 	private terminalOutputs: Map<string, { stdout: string; stderr: string }> = new Map();
 	private updateCallback: ((update: SessionUpdate) => void) | null = null;
+	private modeState: SessionModeState | null = null;
 
 	constructor(app: App, settings: ACPClientSettings) {
 		this.app = app;
@@ -160,8 +166,29 @@ export class ACPClient {
 		});
 
 		this.sessionId = response.sessionId;
+
+		// Store mode state if provided
+		if (response.modes) {
+			this.modeState = {
+				currentModeId: response.modes.currentModeId,
+				availableModes: response.modes.availableModes
+			};
+
+			if (this.settings.debug) {
+				console.log('Session modes:', this.modeState);
+			}
+
+			// Notify UI of available modes
+			if (this.updateCallback) {
+				this.updateCallback({
+					type: 'mode_change',
+					data: this.modeState
+				});
+			}
+		}
+
 		if (this.settings.debug) {
-			console.log('Session created:', this.sessionId);
+			console.log('Session created:', this.sessionId, response);
 		}
 	}
 
@@ -245,6 +272,42 @@ export class ACPClient {
 		await this.connection.cancel({
 			sessionId: this.sessionId
 		});
+	}
+
+	getModeState(): SessionModeState | null {
+		return this.modeState;
+	}
+
+	async setMode(modeId: string): Promise<void> {
+		if (!this.connection || !this.sessionId) {
+			throw new Error('No active session');
+		}
+
+		if (!this.modeState) {
+			throw new Error('No modes available for this session');
+		}
+
+		// Validate that the mode exists
+		const modeExists = this.modeState.availableModes.some(mode => mode.id === modeId);
+		if (!modeExists) {
+			throw new Error(`Invalid mode ID: ${modeId}`);
+		}
+
+		if (this.settings.debug) {
+			console.log('Setting session mode to:', modeId);
+		}
+
+		await this.connection.setSessionMode({
+			sessionId: this.sessionId,
+			modeId: modeId
+		});
+
+		// Update local state
+		this.modeState.currentModeId = modeId;
+
+		if (this.settings.debug) {
+			console.log('Mode changed to:', modeId);
+		}
 	}
 
 	// Client method implementations
@@ -539,6 +602,7 @@ export class ACPClient {
 					this.process = null;
 					this.connection = null;
 					this.sessionId = null;
+					this.modeState = null;
 					resolve();
 				});
 
@@ -546,6 +610,7 @@ export class ACPClient {
 			} else {
 				this.connection = null;
 				this.sessionId = null;
+				this.modeState = null;
 				resolve();
 			}
 		});

@@ -25,6 +25,36 @@
 	text-align: left;
 }
 
+/* Mode Selector */
+.acp-mode-selector {
+	padding: 4px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 0.85em;
+	font-weight: 500;
+	cursor: pointer;
+	transition: border-color 0.2s;
+	min-width: 120px;
+}
+
+.acp-mode-selector:hover:not(:disabled) {
+	border-color: var(--interactive-accent);
+}
+
+.acp-mode-selector:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	background-color: var(--background-secondary);
+}
+
+.acp-mode-selector:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
 /* Messages Container */
 .acp-messages {
 	flex: 1;

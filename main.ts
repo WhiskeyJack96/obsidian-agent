@@ -1,6 +1,7 @@
 import { Plugin, WorkspaceLeaf } from 'obsidian';
 import { ACPClient } from './acp-client';
 import { AgentView, VIEW_TYPE_AGENT } from './agent-view';
+import { PlanView, VIEW_TYPE_PLAN } from './plan-view';
 import { ACPClientSettingTab } from './settings-tab';
 import { ACPClientSettings, DEFAULT_SETTINGS } from './settings';
 
@@ -15,6 +16,12 @@ export default class ACPClientPlugin extends Plugin {
 		this.registerView(
 			VIEW_TYPE_AGENT,
 			(leaf) => new AgentView(leaf, this)
+		);
+
+		// Register the plan view
+		this.registerView(
+			VIEW_TYPE_PLAN,
+			(leaf) => new PlanView(leaf, this)
 		);
 
 		// Initialize client for any existing agent views (from restored workspace)
@@ -72,6 +79,8 @@ export default class ACPClientPlugin extends Plugin {
 
 		// Detach all agent views
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_AGENT);
+		// Detach all plan views
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE_PLAN);
 	}
 
 	initializeExistingViews() {
@@ -134,6 +143,19 @@ export default class ACPClientPlugin extends Plugin {
 			return leaves[0].view as AgentView;
 		}
 		return null;
+	}
+
+	async openPlanView(planData: any): Promise<void> {
+		const { workspace } = this.app;
+		const leaf = await workspace.ensureSideLeaf(VIEW_TYPE_PLAN, "right", {
+			reveal: true,
+			active: true,
+			split: true
+		});
+		if (leaf) {
+			const planView = leaf.view as PlanView;
+			planView.updatePlan(planData);
+		}
 	}
 
 	async loadSettings() {

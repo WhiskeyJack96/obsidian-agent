@@ -167,6 +167,7 @@ export class AgentView extends ItemView {
 		this.toolCallElements.clear();
 		this.toolCallCache.clear();
 		this.commandsMessageElement = null;
+		this.pendingMessage = null;
 	}
 
 	async newConversation(): Promise<void> {
@@ -200,16 +201,30 @@ export class AgentView extends ItemView {
 		this.addMessage('user', message);
 		this.inputField.value = '';
 
+		// Show pending message immediately while waiting for agent response
+		this.showPendingMessage();
+
 		try {
 			await this.client.sendPrompt(message);
 		} catch (err) {
 			new Notice(`Failed to send message: ${err.message}`);
 			console.error('Send error:', err);
+			// Remove pending message on error
+			this.removePendingMessage();
 		}
 	}
 
 	handleUpdate(update: SessionUpdate): void {
 		const data = update.data;
+
+		// Handle turn completion - remove pending message when agent is done
+		if (update.type === 'turn_complete') {
+			this.removePendingMessage();
+			if (this.plugin.settings.debug) {
+				console.log('Agent turn completed:', data);
+			}
+			return;
+		}
 
 		// Handle permission requests specially
 		if (update.type === 'permission_request') {
@@ -272,6 +287,7 @@ export class AgentView extends ItemView {
 	private toolCallElements: Map<string, HTMLElement> = new Map();
 	private toolCallCache: Map<string, { title?: string; rawInput?: any; kind?: string }> = new Map();
 	private commandsMessageElement: HTMLElement | null = null;
+	private pendingMessage: HTMLElement | null = null;
 
 	private async appendToLastAgentMessage(content: any): Promise<void> {
 		if (content.type === 'text' && content.text) {
@@ -291,7 +307,8 @@ export class AgentView extends ItemView {
 				this.component
 			);
 
-			this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+			// Ensure pending message stays at bottom
+			this.ensurePendingAtBottom();
 		}
 	}
 
@@ -301,6 +318,40 @@ export class AgentView extends ItemView {
 		senderEl.setText('Agent');
 		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
 		return contentEl;
+	}
+
+	private showPendingMessage(): void {
+		// Remove any existing pending message first
+		this.removePendingMessage();
+
+		// Create pending message bubble
+		this.pendingMessage = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-pending' });
+		const senderEl = this.pendingMessage.createDiv({ cls: 'acp-message-sender' });
+		senderEl.setText('Agent');
+		const contentEl = this.pendingMessage.createDiv({ cls: 'acp-message-content' });
+
+		// Add loading dots
+		const loadingEl = contentEl.createDiv({ cls: 'acp-loading-dots' });
+		loadingEl.createSpan({ cls: 'acp-loading-dot' });
+		loadingEl.createSpan({ cls: 'acp-loading-dot' });
+		loadingEl.createSpan({ cls: 'acp-loading-dot' });
+
+		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+	}
+
+	private removePendingMessage(): void {
+		if (this.pendingMessage) {
+			this.pendingMessage.remove();
+			this.pendingMessage = null;
+		}
+	}
+
+	private ensurePendingAtBottom(): void {
+		// If pending message exists, move it to the bottom of the messages container
+		if (this.pendingMessage && this.pendingMessage.parentElement === this.messagesContainer) {
+			this.messagesContainer.appendChild(this.pendingMessage);
+			this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+		}
 	}
 
 	private showAvailableCommands(commands: any[]): void {
@@ -332,7 +383,8 @@ export class AgentView extends ItemView {
 			}
 		}
 
-		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+		// Ensure pending message stays at bottom
+		this.ensurePendingAtBottom();
 	}
 
 	private handleToolCallUpdate(updateData: any): void {
@@ -399,7 +451,8 @@ export class AgentView extends ItemView {
 			}
 		}
 
-		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+		// Ensure pending message stays at bottom
+		this.ensurePendingAtBottom();
 	}
 
 	private generateToolTitle(updateData: any): string {
@@ -571,7 +624,8 @@ export class AgentView extends ItemView {
 
 		await MarkdownRenderer.renderMarkdown(planText, contentEl, '', this.component);
 
-		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+		// Ensure pending message stays at bottom
+		this.ensurePendingAtBottom();
 	}
 
 	private showModeChange(mode: any): void {
@@ -581,7 +635,8 @@ export class AgentView extends ItemView {
 		const modeName = typeof mode === 'string' ? mode : (mode.name || 'unknown');
 		contentEl.setText(`Mode changed to: ${modeName}`);
 
-		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+		// Ensure pending message stays at bottom
+		this.ensurePendingAtBottom();
 	}
 
 	private showDebugMessage(data: any): void {

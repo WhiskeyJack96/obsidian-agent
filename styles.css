@@ -66,6 +66,14 @@
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+.acp-message-pending {
+	background-color: var(--background-secondary);
+	margin-right: 20%;
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	opacity: 0.8;
+}
+
 .acp-message-system {
 	background-color: var(--background-secondary-alt);
 	border: 1px solid var(--background-modifier-border);
@@ -100,6 +108,45 @@
 
 .acp-message-content p {
 	margin: 5px 0;
+}
+
+/* Loading Dots Animation */
+.acp-loading-dots {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 0;
+}
+
+.acp-loading-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background-color: var(--text-muted);
+	animation: loading-pulse 1.4s ease-in-out infinite;
+}
+
+.acp-loading-dot:nth-child(1) {
+	animation-delay: 0s;
+}
+
+.acp-loading-dot:nth-child(2) {
+	animation-delay: 0.2s;
+}
+
+.acp-loading-dot:nth-child(3) {
+	animation-delay: 0.4s;
+}
+
+@keyframes loading-pulse {
+	0%, 60%, 100% {
+		opacity: 0.3;
+		transform: scale(0.8);
+	}
+	30% {
+		opacity: 1;
+		transform: scale(1);
+	}
 }
 
 /* Tool Call Display */

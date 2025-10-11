@@ -7,7 +7,7 @@ import { ACPClientSettings } from './settings';
 import * as schema from '@zed-industries/agent-client-protocol';
 
 export interface SessionUpdate {
-	type: 'message' | 'tool_call' | 'plan' | 'mode_change' | 'permission_request';
+	type: 'message' | 'tool_call' | 'plan' | 'mode_change' | 'permission_request' | 'turn_complete';
 	data: any;
 }
 
@@ -216,13 +216,25 @@ export class ACPClient {
 			throw new Error('No active session');
 		}
 
-		await this.connection.prompt({
+		const response = await this.connection.prompt({
 			sessionId: this.sessionId,
 			prompt: [{
 				type: 'text',
 				text: prompt
 			}]
 		});
+
+		// Send turn_complete update when the agent finishes
+		if (this.updateCallback) {
+			this.updateCallback({
+				type: 'turn_complete',
+				data: response
+			});
+		}
+
+		if (this.settings.debug) {
+			console.log('Agent turn completed with response:', response);
+		}
 	}
 
 	async cancelSession(): Promise<void> {

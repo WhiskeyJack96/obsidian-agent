@@ -424,12 +424,12 @@ export class ACPClient {
 			}
 
 			// Request permission unless auto-approve is enabled for writes
-			if (!this.settings.autoApproveWritePermission) {
-				const permissionGranted = await this.requestFilePermission('write', relativePath);
-				if (!permissionGranted) {
-					throw new Error('Permission denied to write file');
-				}
-			}
+			// if (!this.settings.autoApproveWritePermission) {
+			// 	const permissionGranted = await this.requestFilePermission('write', relativePath);
+			// 	if (!permissionGranted) {
+			// 		throw new Error('Permission denied to write file');
+			// 	}
+			// }
 
 			const file = this.app.vault.getAbstractFileByPath(relativePath);
 			if (file) {

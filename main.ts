@@ -2,6 +2,7 @@ import { Plugin, WorkspaceLeaf } from 'obsidian';
 import { ACPClient } from './acp-client';
 import { AgentView, VIEW_TYPE_AGENT } from './agent-view';
 import { PlanView, VIEW_TYPE_PLAN } from './plan-view';
+import { DiffView, VIEW_TYPE_DIFF, DiffData } from './diff-view';
 import { ACPClientSettingTab } from './settings-tab';
 import { ACPClientSettings, DEFAULT_SETTINGS } from './settings';
 
@@ -22,6 +23,12 @@ export default class ACPClientPlugin extends Plugin {
 		this.registerView(
 			VIEW_TYPE_PLAN,
 			(leaf) => new PlanView(leaf, this)
+		);
+
+		// Register the diff view
+		this.registerView(
+			VIEW_TYPE_DIFF,
+			(leaf) => new DiffView(leaf, this)
 		);
 
 		// Initialize client for any existing agent views (from restored workspace)
@@ -81,6 +88,8 @@ export default class ACPClientPlugin extends Plugin {
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_AGENT);
 		// Detach all plan views
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_PLAN);
+		// Detach all diff views
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE_DIFF);
 	}
 
 	initializeExistingViews() {
@@ -156,6 +165,23 @@ export default class ACPClientPlugin extends Plugin {
 			const planView = leaf.view as PlanView;
 			planView.updatePlan(planData);
 		}
+	}
+
+	async openDiffView(diffData: DiffData): Promise<DiffView | null> {
+		const { workspace } = this.app;
+
+		// Get the active leaf or create a new one in the main editor area
+		const leaf = workspace.getLeaf('tab');
+		if (leaf) {
+			await leaf.setViewState({
+				type: VIEW_TYPE_DIFF,
+				active: true
+			});
+
+			workspace.revealLeaf(leaf);
+			return leaf.view as DiffView;
+		}
+		return null;
 	}
 
 	async loadSettings() {

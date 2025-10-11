@@ -66,7 +66,9 @@ export class ACPClient {
 		});
 
 		this.process.on('exit', (code) => {
-			console.log(`Agent process exited with code ${code}`);
+			if (this.settings.debug) {
+				console.log(`Agent process exited with code ${code}`);
+			}
 			// Note: This handler is removed during intentional cleanup to prevent race conditions
 			// It only fires when the process exits unexpectedly
 			this.cleanup().catch((err) => {
@@ -136,7 +138,9 @@ export class ACPClient {
 			}
 		});
 
-		console.log('Agent initialized:', initResponse);
+		if (this.settings.debug) {
+			console.log('Agent initialized:', initResponse);
+		}
 	}
 
 	async createSession(): Promise<void> {
@@ -146,7 +150,9 @@ export class ACPClient {
 
 		// Get vault base path
 		const basePath = this.getVaultPath();
-		console.log('Creating session with cwd:', basePath);
+		if (this.settings.debug) {
+			console.log('Creating session with cwd:', basePath);
+		}
 
 		const response = await this.connection.newSession({
 			cwd: basePath,
@@ -154,7 +160,9 @@ export class ACPClient {
 		});
 
 		this.sessionId = response.sessionId;
-		console.log('Session created:', this.sessionId);
+		if (this.settings.debug) {
+			console.log('Session created:', this.sessionId);
+		}
 	}
 
 	private getVaultPath(): string {
@@ -164,19 +172,25 @@ export class ACPClient {
 		// Try getBasePath() method
 		if (typeof adapter.getBasePath === 'function') {
 			const path = adapter.getBasePath();
-			console.log('Vault path from getBasePath():', path);
+			if (this.settings.debug) {
+				console.log('Vault path from getBasePath():', path);
+			}
 			return path;
 		}
 
 		// Try basePath property
 		if (adapter.basePath) {
-			console.log('Vault path from basePath:', adapter.basePath);
+			if (this.settings.debug) {
+				console.log('Vault path from basePath:', adapter.basePath);
+			}
 			return adapter.basePath;
 		}
 
 		// Try using the vault root property
 		if (adapter.path) {
-			console.log('Vault path from path:', adapter.path);
+			if (this.settings.debug) {
+				console.log('Vault path from path:', adapter.path);
+			}
 			return adapter.path;
 		}
 
@@ -185,11 +199,15 @@ export class ACPClient {
 		const cwd = process.cwd();
 		if (cwd.includes('.obsidian/plugins/')) {
 			const vaultPath = cwd.split('.obsidian')[0].replace(/\/$/, '');
-			console.log('Vault path from cwd parsing:', vaultPath);
+			if (this.settings.debug) {
+				console.log('Vault path from cwd parsing:', vaultPath);
+			}
 			return vaultPath;
 		}
 
-		console.log('Vault path fallback to cwd:', cwd);
+		if (this.settings.debug) {
+			console.log('Vault path fallback to cwd:', cwd);
+		}
 		return cwd;
 	}
 
@@ -283,7 +301,9 @@ export class ACPClient {
 				relativePath = params.path.substring(basePath.length + 1);
 			}
 
-			console.log('Reading file:', { original: params.path, relative: relativePath, basePath });
+			if (this.settings.debug) {
+				console.log('Reading file:', { original: params.path, relative: relativePath, basePath });
+			}
 
 			// Request permission if auto-approve is not enabled for reads
 			if (!this.settings.autoApproveReadPermission) {
@@ -316,7 +336,9 @@ export class ACPClient {
 				relativePath = params.path.substring(basePath.length + 1);
 			}
 
-			console.log('Writing file:', { original: params.path, relative: relativePath, basePath });
+			if (this.settings.debug) {
+				console.log('Writing file:', { original: params.path, relative: relativePath, basePath });
+			}
 
 			// Request permission unless auto-approve is enabled for writes
 			if (!this.settings.autoApproveWritePermission) {
@@ -340,7 +362,9 @@ export class ACPClient {
 	}
 
 	private async handleRequestPermission(params: schema.RequestPermissionRequest): Promise<schema.RequestPermissionResponse> {
-		console.log('Permission requested:', params);
+		if (this.settings.debug) {
+			console.log('Permission requested:', params);
+		}
 
 		// Send permission request to UI for inline approval
 		if (this.updateCallback && params.options && params.options.length > 0) {
@@ -368,7 +392,9 @@ export class ACPClient {
 		const basePath = this.getVaultPath();
 		const workingDir = params.cwd || basePath;
 
-		console.log('Creating terminal:', { command: params.command, args: params.args, cwd: workingDir });
+		if (this.settings.debug) {
+			console.log('Creating terminal:', { command: params.command, args: params.args, cwd: workingDir });
+		}
 
 		// If no args provided, this might be a shell command - use shell: true
 		const useShell = !params.args || params.args.length === 0;
@@ -440,11 +466,13 @@ export class ACPClient {
 			};
 		}
 
-		console.log(`Terminal ${params.terminalId} output:`, {
-			length: combinedOutput.length,
-			exitCode: terminal.exitCode,
-			preview: combinedOutput.substring(0, 100)
-		});
+		if (this.settings.debug) {
+			console.log(`Terminal ${params.terminalId} output:`, {
+				length: combinedOutput.length,
+				exitCode: terminal.exitCode,
+				preview: combinedOutput.substring(0, 100)
+			});
+		}
 
 		return response;
 	}

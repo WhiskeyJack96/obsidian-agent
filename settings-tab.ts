@@ -71,5 +71,15 @@ export class ACPClientSettingTab extends PluginSettingTab {
 					this.plugin.settings.defaultModel = value;
 					await this.plugin.saveSettings();
 				}));
+
+		new Setting(containerEl)
+			.setName('Debug Mode')
+			.setDesc('Enable debug logging to console (errors are always logged)')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.debug)
+				.onChange(async (value) => {
+					this.plugin.settings.debug = value;
+					await this.plugin.saveSettings();
+				}));
 	}
 }

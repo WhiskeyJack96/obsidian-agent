@@ -132,7 +132,9 @@ export class AgentView extends ItemView {
 		// Don't connect if already connected or connecting
 		const currentStatus = this.statusIndicator.getText();
 		if (currentStatus === 'Connecting...' || currentStatus === 'Connected' || currentStatus === 'Session active') {
-			console.log('Already connected or connecting, skipping connect()');
+			if (this.plugin.settings.debug) {
+				console.log('Already connected or connecting, skipping connect()');
+			}
 			return;
 		}
 
@@ -216,14 +218,18 @@ export class AgentView extends ItemView {
 		}
 
 		// Log to console for debugging
-		console.log('Session update received:', data);
+		if (this.plugin.settings.debug) {
+			console.log('Session update received:', data);
+		}
 
 		// Handle different session update types based on ACP spec
 		if (data.update) {
 			const updateData = data.update;
 			const updateType = updateData.sessionUpdate; // Note: it's sessionUpdate, not sessionUpdateType
 
-			console.log('Update type:', updateType);
+			if (this.plugin.settings.debug) {
+				console.log('Update type:', updateType);
+			}
 
 			// Handle agent message chunks (streaming text)
 			if (updateType === 'agent_message_chunk' && updateData.content) {
@@ -405,7 +411,9 @@ export class AgentView extends ItemView {
 		// Try to extract meaningful info from rawInput
 		const rawInput = updateData.rawInput;
 		const kind = updateData.kind;
-		console.log(updateData)
+		if (this.plugin.settings.debug) {
+			console.log(updateData);
+		}
 		if (rawInput) {
 			// File operations
 			if (rawInput.path) {

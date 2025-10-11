@@ -4,6 +4,7 @@ export interface ACPClientSettings {
 	autoApproveWritePermission: boolean;
 	autoApproveReadPermission: boolean;
 	defaultModel: string;
+	debug: boolean;
 }
 
 export const DEFAULT_SETTINGS: ACPClientSettings = {
@@ -11,5 +12,6 @@ export const DEFAULT_SETTINGS: ACPClientSettings = {
 	agentArgs: [],
 	autoApproveWritePermission: false,
 	autoApproveReadPermission: true,
-	defaultModel: ''
+	defaultModel: '',
+	debug: false
 };

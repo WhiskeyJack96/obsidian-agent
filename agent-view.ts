@@ -185,6 +185,9 @@ export class AgentView extends ItemView {
 		this.commandsMessageElement = null;
 		this.pendingMessage = null;
 
+		// Remove plan toast
+		this.removePlanToast();
+
 		// Reset mode selector
 		if (this.modeSelector) {
 			this.modeSelector.empty();
@@ -310,6 +313,10 @@ export class AgentView extends ItemView {
 			else if (updateType === 'plan_update' && updateData.plan) {
 				this.showPlan(updateData.plan);
 			}
+			// Handle plan toast (new type)
+			else if (updateType === 'plan' && updateData.entries) {
+				this.showPlanToast(updateData);
+			}
 			// Handle current mode updates
 			else if (updateType === 'current_mode_update' && updateData.currentModeId) {
 				this.updateCurrentMode(updateData.currentModeId);
@@ -332,6 +339,9 @@ export class AgentView extends ItemView {
 	private toolCallCache: Map<string, { title?: string; rawInput?: any; kind?: string }> = new Map();
 	private commandsMessageElement: HTMLElement | null = null;
 	private pendingMessage: HTMLElement | null = null;
+	private currentPlanToast: HTMLElement | null = null;
+	private currentPlanData: any | null = null;
+	private planToastCollapsed: boolean = false;
 
 	private async appendToLastAgentMessage(content: any): Promise<void> {
 		if (content.type === 'text' && content.text) {
@@ -678,6 +688,96 @@ export class AgentView extends ItemView {
 		this.ensurePendingAtBottom();
 	}
 
+	private showPlanToast(planData: any): void {
+		// Store current plan data
+		this.currentPlanData = planData;
+
+		// Create toast if it doesn't exist
+		if (!this.currentPlanToast) {
+			this.currentPlanToast = document.body.createDiv({ cls: 'acp-plan-toast' });
+		}
+
+		// Update toast content
+		this.updatePlanToast(planData);
+
+		// Check if plan is completed and auto-dismiss
+		if (this.isPlanCompleted(planData.entries)) {
+			setTimeout(() => {
+				this.removePlanToast();
+			}, 2000); // Keep visible for 2 seconds after completion
+		}
+	}
+
+	private updatePlanToast(planData: any): void {
+		if (!this.currentPlanToast) return;
+
+		// Clear existing content
+		this.currentPlanToast.empty();
+
+		// Create header with collapse button
+		const header = this.currentPlanToast.createDiv({ cls: 'acp-plan-toast-header' });
+		header.createEl('strong', { text: 'Agent Plan' });
+
+		const collapseBtn = header.createEl('button', {
+			cls: 'acp-plan-toast-collapse-btn',
+			text: this.planToastCollapsed ? '▼' : '▲'
+		});
+		collapseBtn.addEventListener('click', () => {
+			this.planToastCollapsed = !this.planToastCollapsed;
+			this.updatePlanToast(planData);
+		});
+
+		// Create entries container (only show if not collapsed)
+		if (!this.planToastCollapsed) {
+			const entriesContainer = this.currentPlanToast.createDiv({ cls: 'acp-plan-toast-entries' });
+
+			// Render each entry
+			for (const entry of planData.entries) {
+				const entryEl = entriesContainer.createDiv({
+					cls: `acp-plan-entry acp-plan-entry-${entry.status}`
+				});
+
+				// Status icon
+				const iconEl = entryEl.createSpan({ cls: 'acp-plan-entry-icon' });
+				if (entry.status === 'completed') {
+					iconEl.setText('✓');
+				} else if (entry.status === 'in_progress') {
+					iconEl.setText('⟳');
+				} else {
+					iconEl.setText('○');
+				}
+
+				// Content
+				const contentEl = entryEl.createSpan({ cls: 'acp-plan-entry-content' });
+				contentEl.setText(entry.content);
+
+				// Priority badge (optional)
+				if (entry.priority && entry.priority !== 'medium') {
+					const priorityEl = entryEl.createSpan({
+						cls: `acp-plan-entry-priority acp-priority-${entry.priority}`
+					});
+					priorityEl.setText(entry.priority);
+				}
+			}
+		}
+	}
+
+	private removePlanToast(): void {
+		if (this.currentPlanToast) {
+			this.currentPlanToast.addClass('acp-plan-toast-fade-out');
+			setTimeout(() => {
+				this.currentPlanToast?.remove();
+				this.currentPlanToast = null;
+				this.currentPlanData = null;
+				this.planToastCollapsed = false;
+			}, 300); // Match animation duration
+		}
+	}
+
+	private isPlanCompleted(entries: any[]): boolean {
+		return entries.every(entry => entry.status === 'completed');
+	}
+
 	private showModeChange(mode: any): void {
 		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-system' });
 		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
@@ -828,6 +928,8 @@ export class AgentView extends ItemView {
 		if (this.component) {
 			this.component.unload();
 		}
+		// Clean up plan toast
+		this.removePlanToast();
 	}
 
 	private handleAutocomplete(): void {

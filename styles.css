@@ -593,3 +593,167 @@
 .acp-cancel-button:active {
 	opacity: 0.6;
 }
+
+/* Plan Toast Notification */
+.acp-plan-toast {
+	position: fixed;
+	top: 20px;
+	right: 20px;
+	width: 350px;
+	max-width: calc(100vw - 40px);
+	max-height: calc(100vh - 40px);
+	overflow-y: auto;
+	background-color: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	padding: 12px;
+	z-index: 9999;
+	backdrop-filter: blur(10px);
+	animation: acp-toast-fade-in 0.3s ease-out;
+}
+
+.acp-plan-toast-fade-out {
+	animation: acp-toast-fade-out 0.3s ease-in forwards;
+}
+
+@keyframes acp-toast-fade-in {
+	from {
+		opacity: 0;
+		transform: translateY(-20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes acp-toast-fade-out {
+	from {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(-20px);
+	}
+}
+
+.acp-plan-toast-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 12px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.acp-plan-toast-header strong {
+	font-size: 1.1em;
+	color: var(--text-accent);
+}
+
+.acp-plan-toast-collapse-btn {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	font-size: 0.9em;
+	padding: 4px 8px;
+	color: var(--text-muted);
+	border-radius: 4px;
+	transition: background-color 0.2s, color 0.2s;
+}
+
+.acp-plan-toast-collapse-btn:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.acp-plan-toast-entries {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+/* Plan Entry Styles */
+.acp-plan-entry {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 8px;
+	border-radius: 4px;
+	background-color: var(--background-secondary);
+	transition: all 0.2s ease;
+}
+
+.acp-plan-entry-icon {
+	font-size: 1.2em;
+	line-height: 1;
+	min-width: 20px;
+	text-align: center;
+	font-weight: bold;
+}
+
+.acp-plan-entry-content {
+	flex: 1;
+	font-size: 0.9em;
+	line-height: 1.4;
+	color: var(--text-normal);
+}
+
+.acp-plan-entry-priority {
+	font-size: 0.75em;
+	padding: 2px 6px;
+	border-radius: 3px;
+	text-transform: uppercase;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+/* Status-specific styles */
+.acp-plan-entry-completed {
+	opacity: 0.7;
+}
+
+.acp-plan-entry-completed .acp-plan-entry-icon {
+	color: var(--text-success);
+}
+
+.acp-plan-entry-completed .acp-plan-entry-content {
+	text-decoration: line-through;
+	color: var(--text-muted);
+}
+
+.acp-plan-entry-in_progress {
+	background-color: var(--background-primary-alt);
+	border-left: 3px solid var(--interactive-accent);
+}
+
+.acp-plan-entry-in_progress .acp-plan-entry-icon {
+	color: var(--interactive-accent);
+	animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.acp-plan-entry-pending .acp-plan-entry-icon {
+	color: var(--text-muted);
+}
+
+/* Priority badges */
+.acp-priority-high {
+	background-color: var(--text-error);
+	color: var(--text-on-accent);
+}
+
+.acp-priority-low {
+	background-color: var(--text-muted);
+	color: var(--text-on-accent);
+}

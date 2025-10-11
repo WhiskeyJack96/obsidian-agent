@@ -11,6 +11,7 @@ export class AgentView extends ItemView {
 	private inputContainer: HTMLElement;
 	private inputField: HTMLTextAreaElement;
 	private statusIndicator: HTMLElement;
+	private cancelButton: HTMLElement;
 	private component: Component;
 	private availableCommands: Array<{name: string; description?: string}> = [];
 	private autocompleteContainer: HTMLElement | null = null;
@@ -53,6 +54,13 @@ export class AgentView extends ItemView {
 			text: 'New Conversation'
 		});
 		newConversationButton.addEventListener('click', () => this.newConversation());
+
+		this.cancelButton = statusBarContainer.createEl('button', {
+			cls: 'acp-cancel-button',
+			text: 'Cancel'
+		});
+		this.cancelButton.style.display = 'none'; // Initially hidden
+		this.cancelButton.addEventListener('click', () => this.cancelCurrentTurn());
 
 		// Create messages container
 		this.messagesContainer = container.createDiv({ cls: 'acp-messages' });
@@ -185,6 +193,22 @@ export class AgentView extends ItemView {
 
 		// Reconnect
 		await this.connect();
+	}
+
+	async cancelCurrentTurn(): Promise<void> {
+		if (!this.client) {
+			new Notice('Client not initialized');
+			return;
+		}
+
+		try {
+			await this.client.cancelSession();
+			this.removePendingMessage();
+			this.addMessage('system', 'Agent turn cancelled.');
+		} catch (err) {
+			new Notice(`Failed to cancel: ${err.message}`);
+			console.error('Cancel error:', err);
+		}
 	}
 
 	async sendMessage(): Promise<void> {
@@ -336,6 +360,9 @@ export class AgentView extends ItemView {
 		loadingEl.createSpan({ cls: 'acp-loading-dot' });
 		loadingEl.createSpan({ cls: 'acp-loading-dot' });
 
+		// Show cancel button
+		this.cancelButton.style.display = 'block';
+
 		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
 	}
 
@@ -344,6 +371,9 @@ export class AgentView extends ItemView {
 			this.pendingMessage.remove();
 			this.pendingMessage = null;
 		}
+
+		// Hide cancel button when no pending message
+		this.cancelButton.style.display = 'none';
 	}
 
 	private ensurePendingAtBottom(): void {

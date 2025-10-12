@@ -1007,7 +1007,7 @@ export class AgentView extends ItemView {
 		// Replace from trigger position to end of query with the selected item
 		const before = value.substring(0, item.triggerPos);
 		const after = value.substring(queryEnd);
-		const triggerChar = item.type === 'command' ? '/' : '@';
+		const triggerChar = item.type === 'command' ? '/' : '';
 
 		this.inputField.value = before + triggerChar + item.insertText + ' ' + after;
 

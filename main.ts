@@ -109,7 +109,7 @@ export default class ACPClientPlugin extends Plugin {
 			return;
 		}
 		if (!this.client) {
-			this.client = new ACPClient(this.app, this.settings);
+			this.client = new ACPClient(this.app, this.settings, this);
 		}
 		view.setClient(this.client);
 	}
@@ -178,7 +178,7 @@ export default class ACPClientPlugin extends Plugin {
 				active: true
 			});
 
-			workspace.revealLeaf(leaf);
+			await workspace.revealLeaf(leaf);
 			return leaf.view as DiffView;
 		}
 		return null;

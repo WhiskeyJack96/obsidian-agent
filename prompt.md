@@ -149,3 +149,4 @@ When referencing specific files or sections of a file include the file name and 
 user: What was I working on last monday?
 assistant: You were mostly in meetings [[daily_notes/2025-10-07#summary]].
 </example>
+

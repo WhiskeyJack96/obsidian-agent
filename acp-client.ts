@@ -2,10 +2,12 @@ import { spawn, ChildProcess } from 'child_process';
 import { ClientSideConnection, ndJsonStream, Client, Agent } from '@zed-industries/agent-client-protocol';
 import { Readable as NodeReadable, Writable as NodeWritable } from 'stream';
 import { ReadableStream, WritableStream } from 'stream/web';
-import { App, Notice } from 'obsidian';
+import { App, Notice, FileSystemAdapter, TFile } from 'obsidian';
 import { ACPClientSettings } from './settings';
 import * as schema from '@zed-industries/agent-client-protocol';
 import { readFile, readFileSync } from 'fs';
+import type ACPClientPlugin from './main';
+import { DiffData, DiffResult } from './diff-view';
 
 export interface SessionModeState {
 	currentModeId: string;
@@ -20,6 +22,7 @@ export interface SessionUpdate {
 export class ACPClient {
 	private app: App;
 	private settings: ACPClientSettings;
+	private plugin: ACPClientPlugin;
 	private process: ChildProcess | null = null;
 	private connection: ClientSideConnection | null = null;
 	private sessionId: string | null = null;
@@ -28,9 +31,10 @@ export class ACPClient {
 	private updateCallback: ((update: SessionUpdate) => void) | null = null;
 	private modeState: SessionModeState | null = null;
 
-	constructor(app: App, settings: ACPClientSettings) {
+	constructor(app: App, settings: ACPClientSettings, plugin: ACPClientPlugin) {
 		this.app = app;
 		this.settings = settings;
+		this.plugin = plugin;
 	}
 
 	setUpdateCallback(callback: (update: SessionUpdate) => void) {
@@ -201,49 +205,11 @@ export class ACPClient {
 	}
 
 	private getVaultPath(): string {
-		// The vault adapter has the base path
-		const adapter = this.app.vault.adapter as any;
-
-		// Try getBasePath() method
-		if (typeof adapter.getBasePath === 'function') {
-			const path = adapter.getBasePath();
-			if (this.settings.debug) {
-				console.log('Vault path from getBasePath():', path);
-			}
-			return path;
+		const adapter = this.app.vault.adapter;
+		if (adapter instanceof FileSystemAdapter) {
+			return adapter.getBasePath();
 		}
-
-		// Try basePath property
-		if (adapter.basePath) {
-			if (this.settings.debug) {
-				console.log('Vault path from basePath:', adapter.basePath);
-			}
-			return adapter.basePath;
-		}
-
-		// Try using the vault root property
-		if (adapter.path) {
-			if (this.settings.debug) {
-				console.log('Vault path from path:', adapter.path);
-			}
-			return adapter.path;
-		}
-
-		// Last resort: process.cwd() is likely the plugin dir, so go up 3 levels
-		// from .obsidian/plugins/plugin-name to vault root
-		const cwd = process.cwd();
-		if (cwd.includes('.obsidian/plugins/')) {
-			const vaultPath = cwd.split('.obsidian')[0].replace(/\/$/, '');
-			if (this.settings.debug) {
-				console.log('Vault path from cwd parsing:', vaultPath);
-			}
-			return vaultPath;
-		}
-
-		if (this.settings.debug) {
-			console.log('Vault path fallback to cwd:', cwd);
-		}
-		return cwd;
+    	return process.cwd();
 	}
 
 	async sendPrompt(prompt: string): Promise<void> {
@@ -423,20 +389,46 @@ export class ACPClient {
 				console.log('Writing file:', { original: params.path, relative: relativePath, basePath });
 			}
 
-			// Request permission unless auto-approve is enabled for writes
-			// if (!this.settings.autoApproveWritePermission) {
-			// 	const permissionGranted = await this.requestFilePermission('write', relativePath);
-			// 	if (!permissionGranted) {
-			// 		throw new Error('Permission denied to write file');
-			// 	}
-			// }
+			// Read current file content to show diff
+			const file = this.app.vault.getFileByPath(relativePath);
+			let oldText = '';
 
-			const file = this.app.vault.getAbstractFileByPath(relativePath);
 			if (file) {
-				await this.app.vault.modify(file as any, params.content);
-			} else {
-				await this.app.vault.create(relativePath, params.content);
+				// File exists, read current content
+				oldText = await this.app.vault.read(file);
 			}
+
+			// Create diff data
+			const diffData: DiffData = {
+				oldText: oldText,
+				newText: params.content,
+				path: relativePath,
+				toolCallId: Math.random().toString(36).substring(7)
+			};
+
+			// Open diff view and wait for user approval
+			const diffView = await this.plugin.openDiffView(diffData);
+			if (!diffView) {
+				throw new Error('Failed to open diff view');
+			}
+
+			// Wait for user to accept or reject, and get edited content
+			const result = await new Promise<DiffResult>((resolve) => {
+				diffView.setDiffData(diffData, resolve);
+			});
+
+			if (!result.approved) {
+				throw new Error('User rejected the file write');
+			}
+
+			// User approved, proceed with write using edited content if provided
+			const contentToWrite = result.editedText || params.content;
+			if (file) {
+				await this.app.vault.modify(file as any, contentToWrite);
+			} else {
+				await this.app.vault.create(relativePath, contentToWrite);
+			}
+
 			return {};
 		} catch (err) {
 			console.error('File write error:', err);

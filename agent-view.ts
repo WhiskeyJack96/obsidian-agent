@@ -1,7 +1,6 @@
 import { ItemView, WorkspaceLeaf, Notice, MarkdownRenderer, Component } from 'obsidian';
 import { ACPClient, SessionUpdate } from './acp-client';
 import type ACPClientPlugin from './main';
-import { DiffData } from './diff-view';
 
 export const VIEW_TYPE_AGENT = 'acp-agent-view';
 
@@ -334,7 +333,7 @@ export class AgentView extends ItemView {
 	private lastAgentMessage: HTMLElement | null = null;
 	private lastAgentMessageText: string = '';
 	private toolCallElements: Map<string, HTMLElement> = new Map();
-	private toolCallCache: Map<string, { title?: string; rawInput?: any; kind?: string }> = new Map();
+	private toolCallCache: Map<string, { title?: string; rawInput?: any; kind?: string; content?: any[] }> = new Map();
 	private commandsMessageElement: HTMLElement | null = null;
 	private pendingMessage: HTMLElement | null = null;
 
@@ -463,21 +462,6 @@ export class AgentView extends ItemView {
 			this.toolCallCache.set(toolCallId, mergedData)
 		}
 
-		// Check if this is an edit tool call with pending status and diff content
-		if (mergedData.kind === 'edit' &&
-		    mergedData.status === 'pending' &&
-		    mergedData.content &&
-		    Array.isArray(mergedData.content)) {
-
-			// Find the diff content block
-			const diffBlock = mergedData.content.find((block: any) => block.type === 'diff');
-			if (diffBlock && diffBlock.oldText !== undefined && diffBlock.newText !== undefined && diffBlock.path) {
-				// Open diff view for user approval
-				await this.showDiffForApproval(toolCallId, diffBlock.path, diffBlock.oldText, diffBlock.newText);
-				return; // Don't show the normal tool call UI for edits
-			}
-		}
-				
 		// Check if we already have a message for this tool call
 		let messageEl = toolCallId ? this.toolCallElements.get(toolCallId) : null;
 
@@ -1091,51 +1075,4 @@ export class AgentView extends ItemView {
 		}
 	}
 
-	private async showDiffForApproval(toolCallId: string, path: string, oldText: string, newText: string): Promise<void> {
-		// Create diff data
-		const diffData: DiffData = {
-			oldText,
-			newText,
-			path,
-			toolCallId
-		};
-
-		// Open diff view
-		const diffView = await this.plugin.openDiffView(diffData);
-		if (!diffView) {
-			new Notice('Failed to open diff view');
-			return;
-		}
-
-		// Set diff data and wait for user response
-		const approved = await new Promise<boolean>((resolve) => {
-			diffView.setDiffData(diffData, resolve);
-		});
-
-		// Update tool call display based on approval
-		if (approved) {
-			// Show a compact message indicating approval
-			const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-tool' });
-			const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
-			const toolHeader = contentEl.createDiv({ cls: 'acp-tool-compact-header' });
-
-			const fileName = path.split('/').pop() || path;
-			toolHeader.createSpan({ text: `Edit approved: "${fileName}"`, cls: 'acp-tool-title' });
-
-			const statusBadge = toolHeader.createEl('span', { cls: 'acp-tool-status-badge acp-tool-status-completed' });
-		} else {
-			// Show a compact message indicating rejection
-			const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-tool' });
-			const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
-			const toolHeader = contentEl.createDiv({ cls: 'acp-tool-compact-header' });
-
-			const fileName = path.split('/').pop() || path;
-			toolHeader.createSpan({ text: `Edit rejected: "${fileName}"`, cls: 'acp-tool-title' });
-
-			const statusBadge = toolHeader.createEl('span', { cls: 'acp-tool-status-badge acp-tool-status-error' });
-		}
-
-		// Ensure pending message stays at bottom
-		this.ensurePendingAtBottom();
-	}
 }

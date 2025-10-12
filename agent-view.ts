@@ -15,9 +15,7 @@ import {
 import { MessageRenderer } from './messages/message-renderer';
 import {
 	TextMessage,
-	ToolCallMessage,
 	PermissionRequestMessage,
-	CommandsMessage,
 	PendingMessage,
 	DebugMessage,
 } from './messages';
@@ -46,9 +44,6 @@ export class AgentView extends ItemView {
 	private autocompleteManager: AutocompleteManager | null = null;
 	private connectionState: ConnectionState = ConnectionState.NOT_CONNECTED;
 	private messageRenderer: MessageRenderer;
-	private currentAgentMessageId: string | null = null;
-	private commandsMessageId: string | null = null;
-	private toolCallCache: Map<string, ToolCallUpdate> = new Map();
 
 	constructor(leaf: WorkspaceLeaf, plugin: ACPClientPlugin) {
 		super(leaf);
@@ -218,9 +213,6 @@ export class AgentView extends ItemView {
 
 	clearMessages(): void {
 		this.messageRenderer.clear();
-		this.currentAgentMessageId = null;
-		this.commandsMessageId = null;
-		this.toolCallCache.clear();
 
 		// Reset mode selector
 		if (this.modeSelector) {
@@ -372,40 +364,7 @@ export class AgentView extends ItemView {
 
 
 	private async appendToLastAgentMessage(content: ContentBlock): Promise<void> {
-		if (content.type === 'text' && content.text) {
-			// Create new agent message if we don't have one
-			if (!this.currentAgentMessageId) {
-				this.currentAgentMessageId = `agent-${Date.now()}`;
-				const message = new TextMessage(this.currentAgentMessageId, 'agent', '', this.component);
-				await this.messageRenderer.addMessage(message);
-			}
-
-			// Get current message and accumulate text
-			const currentMessage = this.messageRenderer.getMessage(this.currentAgentMessageId);
-			if (currentMessage && currentMessage instanceof TextMessage) {
-				const currentText = currentMessage.getContent();
-
-				// Smart spacing: detect if we need to add paragraph breaks between chunks
-				let textToAdd = content.text;
-				if (currentText.length > 0) {
-					const lastChar = currentText.trim().slice(-1);
-					const firstChar = content.text.trim()[0];
-
-					// If previous text ends with sentence-ending punctuation and new text starts with uppercase,
-					// it's likely a new thought - add double newline for paragraph break
-					if (/[.!?:]/.test(lastChar) && firstChar && /[A-Z]/.test(firstChar)) {
-						// Only add spacing if there isn't already whitespace at the boundary
-						if (!/\s$/.test(currentText) && !/^\s/.test(content.text)) {
-							textToAdd = '\n\n' + content.text;
-						}
-					}
-				}
-
-				// Update message with accumulated text
-				const newText = currentText + textToAdd;
-				await currentMessage.update(newText);
-			}
-		}
+		await this.messageRenderer.appendToCurrentAgentMessage(content);
 	}
 
 
@@ -436,52 +395,18 @@ export class AgentView extends ItemView {
 			this.autocompleteManager.setAvailableCommands(filteredCommands);
 		}
 
-		// Reuse existing commands message if it exists, otherwise create new one
-		if (this.commandsMessageId && this.messageRenderer.hasMessage(this.commandsMessageId)) {
-			await this.messageRenderer.updateMessage(this.commandsMessageId, filteredCommands);
-		} else {
-			this.commandsMessageId = 'commands';
-			const message = new CommandsMessage(this.commandsMessageId, filteredCommands, this.component);
-			await this.messageRenderer.addMessage(message);
-		}
+		// Update or create commands message
+		await this.messageRenderer.updateOrCreateCommandsMessage(filteredCommands);
 	}
 
 	private async handleToolCallUpdate(updateData: ToolCallUpdate): Promise<void> {
-		this.currentAgentMessageId = null; // End current message
-
-		const toolCallId = updateData.toolCallId;
-		// Get cached permission details if available
-		const cachedDetails = toolCallId ? this.toolCallCache.get(toolCallId) : null;
-
-		// Merge cached details with update data (update data takes precedence)
-		const mergedData = {
-			...cachedDetails,
-			...updateData,
-			// Preserve cached rawInput if updateData doesn't have it
-			rawInput: updateData.rawInput || cachedDetails?.rawInput
-		};
-
-		// Clear completed tool calls out of the cache to keep it from getting very large
-		if (mergedData.status === "completed") {
-			this.toolCallCache.delete(toolCallId);
-		} else {
-			this.toolCallCache.set(toolCallId, mergedData);
-		}
-
-		// Check if we already have a message for this tool call
-		if (toolCallId && this.messageRenderer.hasMessage(toolCallId)) {
-			// Update existing message
-			await this.messageRenderer.updateMessage(toolCallId, mergedData);
-		} else if (toolCallId) {
-			// Create new message for this tool call
-			const message = new ToolCallMessage(toolCallId, mergedData, this.component);
-			await this.messageRenderer.addMessage(message);
-		}
+		this.messageRenderer.endCurrentAgentMessage();
+		await this.messageRenderer.updateOrCreateToolCallMessage(updateData);
 	}
 
 
 	private showPermissionRequest(params: RequestPermissionRequest, resolve: (response: RequestPermissionResponse) => void): void {
-		this.currentAgentMessageId = null;
+		this.messageRenderer.endCurrentAgentMessage();
 
 		const permissionId = `permission-${Date.now()}`;
 		const message = new PermissionRequestMessage(permissionId, params, resolve, this.component);
@@ -591,15 +516,11 @@ export class AgentView extends ItemView {
 	async addMessage(sender: 'user' | 'agent' | 'system', content: string): Promise<void> {
 		// Reset current agent message tracker when adding a new non-agent message
 		if (sender === 'user' || sender === 'system') {
-			this.currentAgentMessageId = null;
+			this.messageRenderer.endCurrentAgentMessage();
 		}
 
 		const messageId = `${sender}-${Date.now()}-${Math.random()}`;
 		const message = new TextMessage(messageId, sender, content, this.component);
-
-		if (sender === 'agent') {
-			this.currentAgentMessageId = messageId;
-		}
 
 		await this.messageRenderer.addMessage(message);
 	}

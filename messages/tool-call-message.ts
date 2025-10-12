@@ -1,15 +1,15 @@
 import { Component } from 'obsidian';
 import { Message } from './base-message';
-import { ToolCallCache } from '../types';
+import { ToolCallUpdate } from '../types';
 
 /**
  * A message representing a tool call with status updates.
  */
 export class ToolCallMessage extends Message {
-	private data: ToolCallCache;
+	private data: ToolCallUpdate;
 	private contentEl: HTMLElement | null = null;
 
-	constructor(id: string, data: ToolCallCache, component: Component) {
+	constructor(id: string, data: ToolCallUpdate, component: Component) {
 		super(id, component);
 		this.data = data;
 	}
@@ -21,7 +21,7 @@ export class ToolCallMessage extends Message {
 		return messageEl;
 	}
 
-	update(newData: Partial<ToolCallCache>): void {
+	update(newData: Partial<ToolCallUpdate>): void {
 		// Merge new data with existing data
 		this.data = {
 			...this.data,
@@ -144,7 +144,7 @@ export class ToolCallMessage extends Message {
 		}
 	}
 
-	getData(): ToolCallCache {
+	getData(): ToolCallUpdate {
 		return this.data;
 	}
 }

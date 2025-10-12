@@ -1,5 +1,4 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
-import type ACPClientPlugin from './main';
 import { Plan } from './types';
 
 export const VIEW_TYPE_PLAN = 'acp-plan-view';

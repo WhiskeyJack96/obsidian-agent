@@ -76,28 +76,3 @@ export type SessionUpdate =
 			type: 'turn_complete';
 			data: schema.PromptResponse;
 	  };
-
-/**
- * Cached tool call information for efficient UI updates
- */
-export interface ToolCallCache {
-	title?: string;
-	rawInput?: Record<string, unknown>;
-	kind?: schema.ToolKind;
-	content?: schema.ToolCallContent[];
-	status?: schema.ToolCallStatus;
-}
-
-/**
- * Tool call data from session updates (includes all possible fields from tool_call and tool_call_update)
- */
-export interface ToolCallUpdateData {
-	toolCallId: string;
-	title?: string;
-	status?: schema.ToolCallStatus;
-	kind?: schema.ToolKind;
-	content?: schema.ToolCallContent[];
-	rawInput?: Record<string, unknown>;
-	rawOutput?: Record<string, unknown>;
-	locations?: schema.ToolCallLocation[];
-}

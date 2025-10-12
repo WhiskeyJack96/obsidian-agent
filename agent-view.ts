@@ -3,8 +3,6 @@ import { ACPClient } from './acp-client';
 import type ACPClientPlugin from './main';
 import { AutocompleteManager } from './autocomplete-manager';
 import {
-	ToolCallCache,
-	ToolCallUpdateData,
 	ContentBlock,
 	AvailableCommand,
 	RequestPermissionRequest,
@@ -12,7 +10,7 @@ import {
 	SessionMode,
 	SessionModeState,
 	SessionUpdate,
-	Plan,
+	ToolCallUpdate,
 } from './types';
 import { MessageRenderer } from './messages/message-renderer';
 import {
@@ -50,7 +48,7 @@ export class AgentView extends ItemView {
 	private messageRenderer: MessageRenderer;
 	private currentAgentMessageId: string | null = null;
 	private commandsMessageId: string | null = null;
-	private toolCallCache: Map<string, ToolCallCache> = new Map();
+	private toolCallCache: Map<string, ToolCallUpdate> = new Map();
 
 	constructor(leaf: WorkspaceLeaf, plugin: ACPClientPlugin) {
 		super(leaf);
@@ -346,15 +344,15 @@ export class AgentView extends ItemView {
 			}
 			// Handle tool call start
 			else if (updateType === 'tool_call') {
-				this.handleToolCallUpdate(updateData  as ToolCallUpdateData);
+				this.handleToolCallUpdate(updateData);
 			}
 			// Handle tool call updates (progress/completion)
 			else if (updateType === 'tool_call_update') {
-				this.handleToolCallUpdate(updateData  as ToolCallUpdateData);
+				this.handleToolCallUpdate(updateData);
 			}
 			// Handle plan updates (new type)
 			else if (updateType === 'plan' && updateData.entries) {
-				this.plugin.openPlanView(updateData  as Plan);
+				this.plugin.openPlanView(updateData);
 			}
 			// Handle current mode updates
 			else if (updateType === 'current_mode_update' && updateData.currentModeId) {
@@ -448,7 +446,7 @@ export class AgentView extends ItemView {
 		}
 	}
 
-	private async handleToolCallUpdate(updateData: ToolCallUpdateData): Promise<void> {
+	private async handleToolCallUpdate(updateData: ToolCallUpdate): Promise<void> {
 		this.currentAgentMessageId = null; // End current message
 
 		const toolCallId = updateData.toolCallId;

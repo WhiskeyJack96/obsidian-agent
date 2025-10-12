@@ -8,6 +8,7 @@ import * as schema from '@zed-industries/agent-client-protocol';
 import { readFile, readFileSync } from 'fs';
 import type ACPClientPlugin from './main';
 import { DiffData, DiffResult } from './diff-view';
+import {shellEnv} from 'shell-env';
 
 export interface SessionModeState {
 	currentModeId: string;
@@ -27,8 +28,10 @@ export class ACPClient {
 	private process: ChildProcess | null = null;
 	private connection: ClientSideConnection | null = null;
 	private sessionId: string | null = null;
-	private terminals: Map<string, ChildProcess> = new Map();
-	private terminalOutputs: Map<string, { stdout: string; stderr: string }> = new Map();
+	private terminals: Map<string, {
+		process: ChildProcess;
+		output: { stdout: string; stderr: string };
+	}> = new Map();
 	private updateCallback: ((update: SessionUpdate) => void) | null = null;
 	private modeState: SessionModeState | null = null;
 
@@ -53,10 +56,10 @@ export class ACPClient {
 
 		const	command = this.settings.agentCommand;
 		const 	args = this.settings.agentArgs;
-
+		const userEnv = await shellEnv()
 		this.process = spawn(command, args, {
 			stdio: ['pipe', 'pipe', 'pipe'],
-			env: process.env
+			env: {...process.env, ...userEnv},
 		});
 
 		this.process.on('error', (err) => {
@@ -412,33 +415,35 @@ export class ACPClient {
 			env: process.env,
 		});
 
-		// Initialize output buffer
-		this.terminalOutputs.set(terminalId, { stdout: '', stderr: '' });
+		// Initialize terminal with process and output buffer
+		const terminalData = {
+			process: terminal,
+			output: { stdout: '', stderr: '' }
+		};
+		this.terminals.set(terminalId, terminalData);
 
 		// Collect output continuously
 		terminal.stdout?.on('data', (data) => {
-			const output = this.terminalOutputs.get(terminalId);
-			if (output) {
-				output.stdout += data.toString();
+			const terminal = this.terminals.get(terminalId);
+			if (terminal) {
+				terminal.output.stdout += data.toString();
 			}
 		});
 
 		terminal.stderr?.on('data', (data) => {
-			const output = this.terminalOutputs.get(terminalId);
-			if (output) {
-				output.stderr += data.toString();
+			const terminal = this.terminals.get(terminalId);
+			if (terminal) {
+				terminal.output.stderr += data.toString();
 			}
 		});
 
 		terminal.on('error', (err) => {
 			console.error(`Terminal ${terminalId} error:`, err);
-			const output = this.terminalOutputs.get(terminalId);
-			if (output) {
-				output.stderr += `Error: ${err.message}\n`;
+			const terminal = this.terminals.get(terminalId);
+			if (terminal) {
+				terminal.output.stderr += `Error: ${err.message}\n`;
 			}
 		});
-
-		this.terminals.set(terminalId, terminal);
 
 		return { terminalId };
 	}
@@ -449,13 +454,8 @@ export class ACPClient {
 			throw new Error(`Terminal not found: ${params.terminalId}`);
 		}
 
-		const outputs = this.terminalOutputs.get(params.terminalId);
-		if (!outputs) {
-			throw new Error(`Terminal output buffer not found: ${params.terminalId}`);
-		}
-
 		// Combine stdout and stderr
-		const combinedOutput = outputs.stdout + outputs.stderr;
+		const combinedOutput = terminal.output.stdout + terminal.output.stderr;
 
 		const response: schema.TerminalOutputResponse = {
 			output: combinedOutput,
@@ -463,16 +463,16 @@ export class ACPClient {
 		};
 
 		// Include exit status if process has exited
-		if (terminal.exitCode !== null) {
+		if (terminal.process.exitCode !== null) {
 			response.exitStatus = {
-				exitCode: terminal.exitCode
+				exitCode: terminal.process.exitCode
 			};
 		}
 
 		if (this.settings.debug) {
 			console.log(`Terminal ${params.terminalId} output:`, {
 				length: combinedOutput.length,
-				exitCode: terminal.exitCode,
+				exitCode: terminal.process.exitCode,
 				preview: combinedOutput.substring(0, 100)
 			});
 		}
@@ -486,15 +486,14 @@ export class ACPClient {
 			throw new Error(`Terminal not found: ${params.terminalId}`);
 		}
 
-		terminal.kill();
+		terminal.process.kill();
 	}
 
 	private async handleTerminalRelease(params: schema.ReleaseTerminalRequest): Promise<schema.ReleaseTerminalResponse | void> {
 		const terminal = this.terminals.get(params.terminalId);
 		if (terminal) {
-			terminal.kill();
+			terminal.process.kill();
 			this.terminals.delete(params.terminalId);
-			this.terminalOutputs.delete(params.terminalId);
 		}
 	}
 
@@ -505,7 +504,7 @@ export class ACPClient {
 		}
 
 		return new Promise((resolve) => {
-			terminal.on('exit', (code) => {
+			terminal.process.on('exit', (code) => {
 				resolve({ exitCode: code || 0 });
 			});
 		});
@@ -515,10 +514,9 @@ export class ACPClient {
 		return new Promise((resolve) => {
 			// Clean up terminals
 			for (const terminal of this.terminals.values()) {
-				terminal.kill();
+				terminal.process.kill();
 			}
 			this.terminals.clear();
-			this.terminalOutputs.clear();
 
 			// Kill agent process
 			if (this.process) {

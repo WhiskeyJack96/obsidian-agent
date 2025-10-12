@@ -22,7 +22,7 @@ export default class ACPClientPlugin extends Plugin {
 		// Register the plan view
 		this.registerView(
 			VIEW_TYPE_PLAN,
-			(leaf) => new PlanView(leaf, this)
+			(leaf) => new PlanView(leaf)
 		);
 
 		// Register the diff view
@@ -104,10 +104,6 @@ export default class ACPClientPlugin extends Plugin {
 	}
 
 	ensureClientForView(view: AgentView) {
-		// Check if view is ready before setting client
-		if (typeof view.setClient !== 'function') {
-			return;
-		}
 		if (!this.client) {
 			this.client = new ACPClient(this.app, this.settings, this);
 		}

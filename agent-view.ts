@@ -1,6 +1,7 @@
 import { ItemView, WorkspaceLeaf, Notice, MarkdownRenderer, Component } from 'obsidian';
 import { ACPClient, SessionUpdate } from './acp-client';
 import type ACPClientPlugin from './main';
+import { AutocompleteManager } from './autocomplete-manager';
 
 export const VIEW_TYPE_AGENT = 'acp-agent-view';
 
@@ -23,9 +24,7 @@ export class AgentView extends ItemView {
 	private cancelButton: HTMLElement;
 	private modeSelector: HTMLSelectElement | null = null;
 	private component: Component;
-	private availableCommands: Array<{name: string; description?: string}> = [];
-	private autocompleteContainer: HTMLElement | null = null;
-	private autocompleteSelectedIndex: number = -1;
+	private autocompleteManager: AutocompleteManager | null = null;
 	private connectionState: ConnectionState = ConnectionState.NOT_CONNECTED;
 
 	constructor(leaf: WorkspaceLeaf, plugin: ACPClientPlugin) {
@@ -87,8 +86,8 @@ export class AgentView extends ItemView {
 		this.inputContainer = container.createDiv({ cls: 'acp-input-container' });
 
 		// Create autocomplete container (positioned absolutely above input)
-		this.autocompleteContainer = this.inputContainer.createDiv({ cls: 'acp-autocomplete' });
-		this.autocompleteContainer.style.display = 'none';
+		const autocompleteContainer = this.inputContainer.createDiv({ cls: 'acp-autocomplete' });
+		autocompleteContainer.style.display = 'none';
 
 		this.inputField = this.inputContainer.createEl('textarea', {
 			cls: 'acp-input',
@@ -98,26 +97,14 @@ export class AgentView extends ItemView {
 			}
 		});
 
+		// Initialize autocomplete manager
+		this.autocompleteManager = new AutocompleteManager(this.app, this.inputField, autocompleteContainer);
+
 		this.inputField.addEventListener('keydown', (e) => {
 			// Handle autocomplete keyboard navigation
-			if (this.autocompleteContainer && this.autocompleteContainer.style.display !== 'none') {
-				if (e.key === 'ArrowDown') {
-					e.preventDefault();
-					this.moveAutocompleteSelection(1);
-					return;
-				} else if (e.key === 'ArrowUp') {
-					e.preventDefault();
-					this.moveAutocompleteSelection(-1);
-					return;
-				} else if (e.key === 'Enter' || e.key === 'Tab') {
-					e.preventDefault();
-					this.selectCurrentAutocompleteItem();
-					return;
-				} else if (e.key === 'Escape') {
-					e.preventDefault();
-					this.hideAutocomplete();
-					return;
-				}
+			if (this.autocompleteManager && this.autocompleteManager.handleKeyDown(e)) {
+				e.preventDefault();
+				return;
 			}
 
 			// Normal Enter behavior (send message)
@@ -129,7 +116,9 @@ export class AgentView extends ItemView {
 
 		// Add input event listener for autocomplete
 		this.inputField.addEventListener('input', () => {
-			this.handleAutocomplete();
+			if (this.autocompleteManager) {
+				this.autocompleteManager.handleInput();
+			}
 		});
 
 		// Ensure client is initialized when view opens (after all UI elements are created)
@@ -435,7 +424,10 @@ export class AgentView extends ItemView {
 
 	private showAvailableCommands(commands: any[]): void {
 		// Store commands for autocomplete, minus those that don't make sense in obsidian.
-		this.availableCommands = commands.filter((x) => !["pr-comments", "review", "security-review"].contains(x.name));
+		const filteredCommands = commands.filter((x) => !["pr-comments", "review", "security-review"].contains(x.name));
+		if (this.autocompleteManager) {
+			this.autocompleteManager.setAvailableCommands(filteredCommands);
+		}
 
 		// Reuse existing commands message element if it exists
 		let messageEl: HTMLElement;
@@ -454,7 +446,7 @@ export class AgentView extends ItemView {
 		contentEl.createEl('strong', { text: 'Available Commands:' });
 		const commandList = contentEl.createEl('ul', { cls: 'acp-command-list' });
 
-		for (const cmd of this.availableCommands) {
+		for (const cmd of filteredCommands) {
 			const item = commandList.createEl('li');
 			item.createEl('code', { text: `/${cmd.name}`, cls: 'acp-command-name' });
 			if (cmd.description) {
@@ -860,245 +852,4 @@ export class AgentView extends ItemView {
 			this.component.unload();
 		}
 	}
-
-	private handleAutocomplete(): void {
-		const cursorPos = this.inputField.selectionStart;
-		const textBeforeCursor = this.inputField.value.substring(0, cursorPos);
-
-		// Find the last trigger character (/ or @) before the cursor
-		const slashMatch = textBeforeCursor.lastIndexOf('/');
-		const atMatch = textBeforeCursor.lastIndexOf('@');
-
-		let triggerType: 'command' | 'file' | null = null;
-		let triggerPos = -1;
-		let query = '';
-
-		// Determine which trigger is most recent
-		if (slashMatch > atMatch && slashMatch !== -1) {
-			// Check if this is the start of the line or preceded by whitespace
-			if (slashMatch === 0 || /\s/.test(textBeforeCursor[slashMatch - 1])) {
-				triggerType = 'command';
-				triggerPos = slashMatch;
-				query = textBeforeCursor.substring(slashMatch + 1);
-			}
-		} else if (atMatch !== -1 && atMatch > slashMatch) {
-			// Check if this is the start of the line or preceded by whitespace
-			if (atMatch === 0 || /\s/.test(textBeforeCursor[atMatch - 1])) {
-				triggerType = 'file';
-				triggerPos = atMatch;
-				query = textBeforeCursor.substring(atMatch + 1);
-			}
-		}
-
-		// If we found a trigger and the query doesn't contain whitespace, show autocomplete
-		if (triggerType && triggerPos !== -1 && !/\s/.test(query)) {
-			if (triggerType === 'command') {
-				this.showCommandAutocomplete(query, triggerPos);
-			} else if (triggerType === 'file') {
-				this.showFileAutocomplete(query, triggerPos);
-			}
-		} else {
-			this.hideAutocomplete();
-		}
-	}
-
-	private showCommandAutocomplete(query: string, triggerPos: number): void {
-		const filtered = this.availableCommands.filter(cmd =>
-			cmd.name.toLowerCase().includes(query.toLowerCase())
-		);
-
-		if (filtered.length === 0) {
-			this.hideAutocomplete();
-			return;
-		}
-
-		this.renderAutocomplete(filtered.map(cmd => ({
-			type: 'command',
-			name: cmd.name,
-			description: cmd.description,
-			insertText: cmd.name,
-			triggerPos: triggerPos
-		})));
-	}
-
-	private showFileAutocomplete(query: string, triggerPos: number): void {
-		// Get all files from vault
-		const files = this.app.vault.getMarkdownFiles();
-
-		const filtered = files
-			.filter(file =>
-				file.path.toLowerCase().includes(query.toLowerCase()) ||
-				file.basename.toLowerCase().includes(query.toLowerCase())
-			)
-			.slice(0, 50); // Limit to 50 results
-
-		if (filtered.length === 0) {
-			this.hideAutocomplete();
-			return;
-		}
-
-		this.renderAutocomplete(filtered.map(file => ({
-			type: 'file',
-			name: file.basename,
-			path: file.path,
-			insertText: file.path,
-			triggerPos: triggerPos
-		})));
-	}
-
-	private renderAutocomplete(items: Array<{
-		type: 'command' | 'file';
-		name: string;
-		description?: string;
-		path?: string;
-		insertText: string;
-		triggerPos: number;
-	}>): void {
-		if (!this.autocompleteContainer) return;
-
-		this.autocompleteContainer.empty();
-		this.autocompleteSelectedIndex = 0;
-
-		items.forEach((item, index) => {
-			const itemEl = this.autocompleteContainer!.createDiv({ cls: 'acp-autocomplete-item' });
-
-			if (index === 0) {
-				itemEl.addClass('selected');
-			}
-
-			const nameEl = itemEl.createDiv({ cls: 'acp-autocomplete-item-name' });
-			if (item.type === 'command') {
-				nameEl.setText(`/${item.name}`);
-			} else {
-				nameEl.setText(item.name);
-			}
-
-			if (item.description) {
-				const descEl = itemEl.createDiv({ cls: 'acp-autocomplete-item-description' });
-				descEl.setText(item.description);
-			}
-
-			if (item.path) {
-				const pathEl = itemEl.createDiv({ cls: 'acp-autocomplete-item-path' });
-				pathEl.setText(item.path);
-			}
-
-			// Handle click
-			itemEl.addEventListener('click', () => {
-				this.selectAutocompleteItem(item);
-			});
-
-			// Store item data on element for keyboard navigation
-			(itemEl as any)._acpItem = item;
-		});
-
-		this.autocompleteContainer.style.display = 'block';
-		// Reset scroll position to top when showing new autocomplete
-		this.autocompleteContainer.scrollTop = 0;
-
-		// Adjust container height to show complete items only
-		// Wait for next frame to ensure items are rendered
-		requestAnimationFrame(() => {
-			if (!this.autocompleteContainer) return;
-
-			const firstItem = this.autocompleteContainer.querySelector('.acp-autocomplete-item') as HTMLElement;
-			if (firstItem) {
-				const itemHeight = firstItem.offsetHeight;
-				const maxVisibleItems = 5; // Show up to 5 items at once
-				const itemsToShow = Math.min(items.length, maxVisibleItems);
-				const containerHeight = itemHeight * itemsToShow;
-
-				this.autocompleteContainer.style.maxHeight = `${containerHeight}px`;
-			}
-		});
-	}
-
-	private hideAutocomplete(): void {
-		if (this.autocompleteContainer) {
-			this.autocompleteContainer.style.display = 'none';
-			this.autocompleteSelectedIndex = -1;
-		}
-	}
-
-	private selectAutocompleteItem(item: { insertText: string; type: string; triggerPos: number }): void {
-		const cursorPos = this.inputField.selectionStart;
-		const value = this.inputField.value;
-
-		// Find the end of the current query (up to cursor or next whitespace)
-		let queryEnd = cursorPos;
-		while (queryEnd < value.length && !/\s/.test(value[queryEnd])) {
-			queryEnd++;
-		}
-
-		// Replace from trigger position to end of query with the selected item
-		const before = value.substring(0, item.triggerPos);
-		const after = value.substring(queryEnd);
-		const triggerChar = item.type === 'command' ? '/' : '';
-
-		this.inputField.value = before + triggerChar + item.insertText + ' ' + after;
-
-		// Set cursor after the inserted text
-		const newCursorPos = before.length + 1 + item.insertText.length + 1;
-		this.inputField.setSelectionRange(newCursorPos, newCursorPos);
-
-		this.hideAutocomplete();
-		this.inputField.focus();
-	}
-
-	private moveAutocompleteSelection(direction: number): void {
-		if (!this.autocompleteContainer) return;
-
-		const items = this.autocompleteContainer.querySelectorAll('.acp-autocomplete-item');
-		if (items.length === 0) return;
-
-		// Remove current selection
-		items[this.autocompleteSelectedIndex]?.removeClass('selected');
-
-		// Update index
-		this.autocompleteSelectedIndex += direction;
-
-		// Wrap around
-		if (this.autocompleteSelectedIndex < 0) {
-			this.autocompleteSelectedIndex = items.length - 1;
-		} else if (this.autocompleteSelectedIndex >= items.length) {
-			this.autocompleteSelectedIndex = 0;
-		}
-
-		// Add new selection
-		const selectedItem = items[this.autocompleteSelectedIndex] as HTMLElement;
-		selectedItem?.addClass('selected');
-
-		// Scroll with one-item lookahead so user can see the next item
-		if (selectedItem) {
-			const container = this.autocompleteContainer;
-			const itemHeight = selectedItem.offsetHeight;
-			const lookaheadPadding = itemHeight; // Reserve space for one more item
-			const itemTop = selectedItem.offsetTop;
-			const itemBottom = itemTop + selectedItem.offsetHeight;
-			const containerScrollTop = container.scrollTop;
-			const containerHeight = container.clientHeight;
-			const containerScrollBottom = containerScrollTop + containerHeight;
-
-			// If item is near top boundary, scroll up to show previous item
-			if (itemTop < containerScrollTop + lookaheadPadding) {
-				container.scrollTop = Math.max(0, itemTop - lookaheadPadding);
-			}
-			// If item is near bottom boundary, scroll down to show next item
-			else if (itemBottom > containerScrollBottom - lookaheadPadding) {
-				container.scrollTop = itemBottom - containerHeight + lookaheadPadding;
-			}
-		}
-	}
-
-	private selectCurrentAutocompleteItem(): void {
-		if (!this.autocompleteContainer) return;
-
-		const items = this.autocompleteContainer.querySelectorAll('.acp-autocomplete-item');
-		const selectedItem = items[this.autocompleteSelectedIndex] as HTMLElement;
-
-		if (selectedItem && (selectedItem as any)._acpItem) {
-			this.selectAutocompleteItem((selectedItem as any)._acpItem);
-		}
-	}
-
 }

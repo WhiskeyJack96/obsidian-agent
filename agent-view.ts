@@ -333,15 +333,15 @@ export class AgentView extends ItemView {
 			}
 			// Handle tool call start
 			else if (updateType === 'tool_call') {
-				this.handleToolCallUpdate(updateData as unknown as ToolCallUpdateData);
+				this.handleToolCallUpdate(updateData  as ToolCallUpdateData);
 			}
 			// Handle tool call updates (progress/completion)
 			else if (updateType === 'tool_call_update') {
-				this.handleToolCallUpdate(updateData as unknown as ToolCallUpdateData);
+				this.handleToolCallUpdate(updateData  as ToolCallUpdateData);
 			}
 			// Handle plan updates (new type)
 			else if (updateType === 'plan' && updateData.entries) {
-				this.plugin.openPlanView(updateData as unknown as Plan);
+				this.plugin.openPlanView(updateData  as Plan);
 			}
 			// Handle current mode updates
 			else if (updateType === 'current_mode_update' && updateData.currentModeId) {
@@ -641,18 +641,6 @@ export class AgentView extends ItemView {
 		}
 	}
 
-	private getToolIcon(kind: string): string {
-		const icons: Record<string, string> = {
-			'read': '📖',
-			'write': '✍️',
-			'execute': '⚡',
-			'search': '🔍',
-			'list': '📋',
-			'edit': '✏️'
-		};
-		return icons[kind] || '🔧';
-	}
-
 	private showPermissionRequest(params: RequestPermissionRequest, resolve: (response: RequestPermissionResponse) => void): void {
 		this.lastAgentMessage = null;
 		this.lastAgentMessageText = '';
@@ -707,31 +695,6 @@ export class AgentView extends ItemView {
 
 		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
 	}
-
-	private async showPlan(plan: Plan | string): Promise<void> {
-		this.lastAgentMessage = null;
-		this.lastAgentMessageText = '';
-
-		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-plan' });
-		const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
-		senderEl.setText('Plan');
-
-		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
-
-		let planText: string;
-		if (typeof plan === 'string') {
-			planText = plan;
-		} else {
-			// Plan is a structured object with entries, render as JSON
-			planText = '```json\n' + JSON.stringify(plan, null, 2) + '\n```';
-		}
-
-		await MarkdownRenderer.renderMarkdown(planText, contentEl, '', this.component);
-
-		// Ensure pending message stays at bottom
-		this.ensurePendingAtBottom();
-	}
-
 
 	private showModeChange(mode: SessionMode | string): void {
 		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-system' });

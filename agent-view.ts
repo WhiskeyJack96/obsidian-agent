@@ -2,13 +2,12 @@ import { ItemView, WorkspaceLeaf, Notice, Component } from 'obsidian';
 import { ACPClient } from './acp-client';
 import type ACPClientPlugin from './main';
 import { AutocompleteManager } from './autocomplete-manager';
+import { ModeManager } from './mode-manager';
 import {
 	ContentBlock,
 	AvailableCommand,
 	RequestPermissionRequest,
 	RequestPermissionResponse,
-	SessionMode,
-	SessionModeState,
 	SessionUpdate,
 	ToolCallUpdate,
 } from './types';
@@ -39,7 +38,7 @@ export class AgentView extends ItemView {
 	private inputField: HTMLTextAreaElement;
 	private statusIndicator: HTMLElement;
 	private cancelButton: HTMLElement;
-	private modeSelector: HTMLSelectElement | null = null;
+	private modeManager: ModeManager | null = null;
 	private component: Component;
 	private autocompleteManager: AutocompleteManager | null = null;
 	private connectionState: ConnectionState = ConnectionState.NOT_CONNECTED;
@@ -77,12 +76,12 @@ export class AgentView extends ItemView {
 		this.statusIndicator = statusBarContainer.createDiv({ cls: 'acp-status' });
 		this.statusIndicator.setText('Not connected');
 
-		// Create mode selector dropdown
-		this.modeSelector = statusBarContainer.createEl('select', {
-			cls: 'acp-mode-selector'
-		});
-		this.modeSelector.disabled = true; // Initially disabled until session is created
-		this.modeSelector.addEventListener('change', () => this.handleModeChange());
+		// Create mode manager
+		this.modeManager = new ModeManager(
+			statusBarContainer,
+			(modeName) => this.addMessage('system', `Mode changed to: ${modeName}`),
+			this.plugin.settings.debug
+		);
 
 		const newConversationButton = statusBarContainer.createEl('button', {
 			cls: 'acp-new-conversation-button',
@@ -153,6 +152,12 @@ export class AgentView extends ItemView {
 		this.client.setUpdateCallback((update: SessionUpdate) => {
 			this.handleUpdate(update);
 		});
+
+		// Set client for mode manager
+		if (this.modeManager) {
+			this.modeManager.setClient(client);
+		}
+
 		// Auto-connect when client is set (but only if not already connected)
 		if (this.connectionState === ConnectionState.NOT_CONNECTED) {
 			this.connect();
@@ -214,10 +219,9 @@ export class AgentView extends ItemView {
 	clearMessages(): void {
 		this.messageRenderer.clear();
 
-		// Reset mode selector
-		if (this.modeSelector) {
-			this.modeSelector.empty();
-			this.modeSelector.disabled = true;
+		// Reset mode manager
+		if (this.modeManager) {
+			this.modeManager.reset();
 		}
 	}
 
@@ -290,7 +294,9 @@ export class AgentView extends ItemView {
 
 		// Handle mode changes - update UI
 		if (update.type === 'mode_change') {
-			this.updateModeSelector(update.data);
+			if (this.modeManager) {
+				this.modeManager.updateModeSelector(update.data);
+			}
 			return;
 		}
 
@@ -323,21 +329,29 @@ export class AgentView extends ItemView {
 			// Handle agent message chunks (streaming text)
 			if (updateType === 'agent_message_chunk' && updateData.content) {
 				this.appendToLastAgentMessage(updateData.content);
+				return
 			}
 			else if (updateType === 'available_commands_update' && updateData.availableCommands) {
 				this.showAvailableCommands(updateData.availableCommands);
+				return
 			}
 			else if (updateType === 'tool_call') {
 				this.handleToolCallUpdate(updateData);
+				return
 			}
 			else if (updateType === 'tool_call_update') {
 				this.handleToolCallUpdate(updateData);
+				return
 			}
 			else if (updateType === 'plan' && updateData.entries) {
 				this.plugin.openPlanView(updateData);
+				return
 			}
 			else if (updateType === 'current_mode_update' && updateData.currentModeId) {
-				this.updateCurrentMode(updateData.currentModeId);
+				if (this.modeManager) {
+					this.modeManager.updateCurrentMode(updateData.currentModeId);
+				}
+				return
 			}
 		}
 		// No update field, might be a different structure
@@ -384,100 +398,6 @@ export class AgentView extends ItemView {
 		const permissionId = `permission-${Date.now()}`;
 		const message = new PermissionRequestMessage(permissionId, params, resolve, this.component);
 		this.messageRenderer.addMessage(message);
-	}
-
-	private async showModeChange(mode: SessionMode | string): Promise<void> {
-		const modeName = typeof mode === 'string' ? mode : (mode.name || 'unknown');
-		await this.addMessage('system', `Mode changed to: ${modeName}`);
-	}
-
-	private updateModeSelector(modeState: SessionModeState): void {
-		if (!this.modeSelector || !modeState) {
-			return;
-		}
-
-		// Clear existing options
-		this.modeSelector.empty();
-
-		// Add options for each available mode
-		for (const mode of modeState.availableModes) {
-			const option = this.modeSelector.createEl('option', {
-				value: mode.id,
-				text: mode.name
-			});
-
-			// Set tooltip with description if available
-			if (mode.description) {
-				option.title = mode.description;
-			}
-		}
-
-		// Set current mode
-		this.modeSelector.value = modeState.currentModeId;
-
-		// Enable the selector
-		this.modeSelector.disabled = false;
-
-		if (this.plugin.settings.debug) {
-			console.log('Mode selector updated:', modeState);
-		}
-	}
-
-	private updateCurrentMode(modeId: string): void {
-		if (!this.modeSelector) {
-			return;
-		}
-
-		// Update the dropdown selection
-		this.modeSelector.value = modeId;
-
-		// Update the client's internal state
-		if (this.client) {
-			const modeState = this.client.getModeState();
-			if (modeState) {
-				modeState.currentModeId = modeId;
-
-				// Find the mode name for display
-				const mode = modeState.availableModes.find(m => m.id === modeId);
-				if (mode) {
-					this.showModeChange(mode);
-				}
-			}
-		}
-
-		if (this.plugin.settings.debug) {
-			console.log('Current mode updated to:', modeId);
-		}
-	}
-
-	private async handleModeChange(): Promise<void> {
-		if (!this.modeSelector || !this.client) {
-			return;
-		}
-
-		const selectedModeId = this.modeSelector.value;
-		const modeState = this.client.getModeState();
-
-		if (!modeState || modeState.currentModeId === selectedModeId) {
-			// No change or no mode state
-			return;
-		}
-
-		try {
-			await this.client.setMode(selectedModeId);
-
-			// Find the mode name for display message
-			const mode = modeState.availableModes.find(m => m.id === selectedModeId);
-			if (mode) {
-				this.showModeChange(mode);
-			}
-		} catch (err) {
-			new Notice(`Failed to change mode: ${err.message}`);
-			console.error('Mode change error:', err);
-
-			// Revert dropdown to previous value
-			this.modeSelector.value = modeState.currentModeId;
-		}
 	}
 
 	private showDebugMessage(data: unknown): void {

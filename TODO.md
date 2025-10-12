@@ -7,4 +7,16 @@ Ideas:
 - Saving sessions (pending claude acp adaptor support)
 - Move Mode to the chat box, add a hotkey for it
 - Respect Accept Edits mode to skip diffs for the current convo
-- git integration option
+- git integration option: The integration should:
+        Only run if a setting is toggled on.
+        If it is it should:
+        Check if the repository is a git repository (look for .git/)
+
+        If it is not it should show a toast with an error.
+
+        check if the `obsidian-git` plugin is installed
+        If the obsidian-git plugin is installed we should use it (it has a property ..gitManager.commit({message:"descriptive message"})
+        If it is not then it should default to commiting with the agent in a seperate session.
+
+Commits should only be done after agent turns complete and the user should be given the ability to review/agree to the commit.
+- tool permissions also render Notices

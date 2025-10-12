@@ -766,6 +766,37 @@
 	gap: 12px;
 }
 
+/* Dark mode specific styling for diff header */
+.theme-dark .acp-diff-header {
+	color: var(--text-normal);
+}
+
+.theme-dark .acp-diff-title-container strong {
+	color: var(--text-normal);
+}
+
+.theme-dark .acp-diff-file-path {
+	color: var(--text-muted);
+}
+
+/* Dark mode cursor color for CodeMirror editor in diff view */
+.theme-dark .acp-diff-content .cm-cursor,
+.theme-dark .acp-diff-content .cm-cursor-primary {
+	border-left-color: white !important;
+}
+
+.theme-dark .acp-diff-content .cm-editor {
+	caret-color: white !important;
+}
+
+.theme-dark .acp-diff-content .cm-content {
+	caret-color: white !important;
+}
+
+.theme-dark .acp-diff-content .cm-line {
+	caret-color: white !important;
+}
+
 .acp-diff-title-container {
 	flex: 1;
 	min-width: 0;

@@ -157,8 +157,8 @@ export class DiffView extends ItemView {
 			this.resolveCallback = null;
 		}
 		new Notice('Edit accepted');
-		// Close the view by detaching the leaf
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_DIFF);
+		// Close only this view, not all diff views
+		this.leaf.detach();
 	}
 
 	private handleReject(): void {
@@ -169,8 +169,8 @@ export class DiffView extends ItemView {
 			this.resolveCallback = null;
 		}
 		new Notice('Edit rejected');
-		// Close the view by detaching the leaf
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_DIFF);
+		// Close only this view, not all diff views
+		this.leaf.detach();
 	}
 
 	async onClose(): Promise<void> {

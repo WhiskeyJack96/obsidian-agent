@@ -4,6 +4,15 @@ import type ACPClientPlugin from './main';
 
 export const VIEW_TYPE_AGENT = 'acp-agent-view';
 
+enum ConnectionState {
+	NOT_CONNECTED = 'not_connected',
+	CONNECTING = 'connecting',
+	CONNECTED = 'connected',
+	SESSION_ACTIVE = 'session_active',
+	CONNECTION_FAILED = 'connection_failed',
+	DISCONNECTED = 'disconnected'
+}
+
 export class AgentView extends ItemView {
 	private plugin: ACPClientPlugin;
 	private client: ACPClient | null = null;
@@ -17,6 +26,7 @@ export class AgentView extends ItemView {
 	private availableCommands: Array<{name: string; description?: string}> = [];
 	private autocompleteContainer: HTMLElement | null = null;
 	private autocompleteSelectedIndex: number = -1;
+	private connectionState: ConnectionState = ConnectionState.NOT_CONNECTED;
 
 	constructor(leaf: WorkspaceLeaf, plugin: ACPClientPlugin) {
 		super(leaf);
@@ -134,9 +144,23 @@ export class AgentView extends ItemView {
 			this.handleUpdate(update);
 		});
 		// Auto-connect when client is set (but only if not already connected)
-		if (this.statusIndicator.getText() === 'Not connected') {
+		if (this.connectionState === ConnectionState.NOT_CONNECTED) {
 			this.connect();
 		}
+	}
+
+	private updateConnectionState(state: ConnectionState): void {
+		this.connectionState = state;
+		// Update status text based on state
+		const statusText: Record<ConnectionState, string> = {
+			[ConnectionState.NOT_CONNECTED]: 'Not connected',
+			[ConnectionState.CONNECTING]: 'Connecting...',
+			[ConnectionState.CONNECTED]: 'Connected',
+			[ConnectionState.SESSION_ACTIVE]: 'Session active',
+			[ConnectionState.CONNECTION_FAILED]: 'Connection failed',
+			[ConnectionState.DISCONNECTED]: 'Disconnected'
+		};
+		this.statusIndicator.setText(statusText[state]);
 	}
 
 	async connect(): Promise<void> {
@@ -146,8 +170,9 @@ export class AgentView extends ItemView {
 		}
 
 		// Don't connect if already connected or connecting
-		const currentStatus = this.statusIndicator.getText();
-		if (currentStatus === 'Connecting...' || currentStatus === 'Connected' || currentStatus === 'Session active') {
+		if (this.connectionState === ConnectionState.CONNECTING ||
+			this.connectionState === ConnectionState.CONNECTED ||
+			this.connectionState === ConnectionState.SESSION_ACTIVE) {
 			if (this.plugin.settings.debug) {
 				console.log('Already connected or connecting, skipping connect()');
 			}
@@ -155,14 +180,14 @@ export class AgentView extends ItemView {
 		}
 
 		try {
-			this.statusIndicator.setText('Connecting...');
+			this.updateConnectionState(ConnectionState.CONNECTING);
 			await this.client.initialize();
-			this.statusIndicator.setText('Connected');
+			this.updateConnectionState(ConnectionState.CONNECTED);
 
 			await this.client.createSession();
-			this.statusIndicator.setText('Session active');
+			this.updateConnectionState(ConnectionState.SESSION_ACTIVE);
 		} catch (err) {
-			this.statusIndicator.setText('Connection failed');
+			this.updateConnectionState(ConnectionState.CONNECTION_FAILED);
 			new Notice(`Failed to connect: ${err.message}`);
 			console.error('Connection error:', err);
 		}
@@ -171,7 +196,7 @@ export class AgentView extends ItemView {
 	async disconnect(): Promise<void> {
 		if (this.client) {
 			await this.client.cleanup();
-			this.statusIndicator.setText('Disconnected');
+			this.updateConnectionState(ConnectionState.DISCONNECTED);
 			this.addMessage('system', 'Disconnected from agent.');
 		}
 	}
@@ -202,8 +227,8 @@ export class AgentView extends ItemView {
 		await this.client.cleanup();
 		this.clearMessages();
 
-		// Reset status so connect() will proceed
-		this.statusIndicator.setText('Not connected');
+		// Reset connection state so connect() will proceed
+		this.updateConnectionState(ConnectionState.NOT_CONNECTED);
 
 		// Reconnect
 		await this.connect();
@@ -409,7 +434,7 @@ export class AgentView extends ItemView {
 	}
 
 	private showAvailableCommands(commands: any[]): void {
-		// Store commands for autocomplete, minus those that don't make sense in obsidian
+		// Store commands for autocomplete, minus those that don't make sense in obsidian.
 		this.availableCommands = commands.filter((x) => !["pr-comments", "review", "security-review"].contains(x.name));
 
 		// Reuse existing commands message element if it exists
@@ -456,6 +481,7 @@ export class AgentView extends ItemView {
 			// Preserve cached rawInput if updateData doesn't have it
 			rawInput: updateData.rawInput || cachedDetails?.rawInput
 		};
+		// Clear completed tool calls out of the cache to keep it from getting very large
 		if (mergedData.status == "completed") {
 			this.toolCallCache.delete(toolCallId)
 		} else {

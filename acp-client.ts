@@ -23,6 +23,7 @@ export class ACPClient {
 	private app: App;
 	private settings: ACPClientSettings;
 	private plugin: ACPClientPlugin;
+	private basePath: string;
 	private process: ChildProcess | null = null;
 	private connection: ClientSideConnection | null = null;
 	private sessionId: string | null = null;
@@ -35,6 +36,10 @@ export class ACPClient {
 		this.app = app;
 		this.settings = settings;
 		this.plugin = plugin;
+		this.basePath = this.getVaultPath();
+		if (this.settings.debug) {
+			console.log('Creating session with cwd:', this.basePath);
+		}
 	}
 
 	setUpdateCallback(callback: (update: SessionUpdate) => void) {
@@ -46,29 +51,12 @@ export class ACPClient {
 			throw new Error('Agent command not configured. Please configure in settings.');
 		}
 
-		// Spawn the agent process
-		// If the command is a Node.js script, run it with node explicitly
-		const isNodeScript = this.settings.agentCommand.endsWith('.js') ||
-			this.settings.agentCommand.includes('node_modules');
-
-		let command: string;
-		let args: string[];
-
-		if (isNodeScript) {
-			// Run with node explicitly to avoid PATH issues
-			command = '/opt/homebrew/bin/node';
-			args = [this.settings.agentCommand, ...this.settings.agentArgs];
-		} else {
-			command = this.settings.agentCommand;
-			args = this.settings.agentArgs;
-		}
+		const	command = this.settings.agentCommand;
+		const 	args = this.settings.agentArgs;
 
 		this.process = spawn(command, args, {
 			stdio: ['pipe', 'pipe', 'pipe'],
-			env: {
-				...process.env,
-				PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:' + (process.env.PATH || '')
-			}
+			env: process.env
 		});
 
 		this.process.on('error', (err) => {
@@ -159,18 +147,13 @@ export class ACPClient {
 			throw new Error('Not connected to agent');
 		}
 
-		// Get vault base path
-		const basePath = this.getVaultPath();
-		if (this.settings.debug) {
-			console.log('Creating session with cwd:', basePath);
-		}
 		let systemPrompt = undefined
 		if (this.settings.obsidianFocussedPrompt) {
 			systemPrompt = readFileSync("prompt.md")
 		}
 
 		const response = await this.connection.newSession({
-			cwd: basePath,
+			cwd: this.basePath,
 			_meta: {
 				systemPrompt
 			},
@@ -209,7 +192,7 @@ export class ACPClient {
 		if (adapter instanceof FileSystemAdapter) {
 			return adapter.getBasePath();
 		}
-    	return process.cwd();
+		throw Error("could not get vault path")
 	}
 
 	async sendPrompt(prompt: string): Promise<void> {
@@ -285,52 +268,6 @@ export class ACPClient {
 	}
 
 	// Client method implementations
-	private async requestFilePermission(operation: 'read' | 'write', path: string): Promise<boolean> {
-		if (!this.updateCallback || !this.sessionId) {
-			return false;
-		}
-
-		return new Promise((resolve) => {
-			const toolCallId = Math.random().toString(36).substring(7);
-			const permissionParams: schema.RequestPermissionRequest = {
-				sessionId: this.sessionId!,
-				toolCall: {
-					toolCallId: toolCallId,
-					title: `${operation === 'read' ? 'Read' : 'Write'} file: ${path}`,
-					kind: operation === 'read' ? 'read' : 'edit',
-					rawInput: {
-						path: path,
-						operation: operation
-					}
-				},
-				options: [
-					{
-						optionId: 'allow',
-						name: 'Allow',
-						kind: 'allow_once'
-					},
-					{
-						optionId: 'deny',
-						name: 'Deny',
-						kind: 'reject_once'
-					}
-				]
-			};
-
-			this.updateCallback!({
-				type: 'permission_request',
-				data: {
-					params: permissionParams,
-					resolve: (response: schema.RequestPermissionResponse) => {
-						const granted = response.outcome?.outcome === 'selected' &&
-							response.outcome?.optionId === 'allow';
-						resolve(granted);
-					}
-				}
-			});
-		});
-	}
-
 	private async handleSessionUpdate(params: schema.SessionNotification): Promise<void> {
 		if (this.updateCallback) {
 			this.updateCallback({
@@ -354,20 +291,12 @@ export class ACPClient {
 				console.log('Reading file:', { original: params.path, relative: relativePath, basePath });
 			}
 
-			// Request permission if auto-approve is not enabled for reads
-			if (!this.settings.autoApproveReadPermission) {
-				const permissionGranted = await this.requestFilePermission('read', relativePath);
-				if (!permissionGranted) {
-					throw new Error('Permission denied to read file');
-				}
-			}
-
-			const file = this.app.vault.getAbstractFileByPath(relativePath);
+			const file = this.app.vault.getFileByPath(relativePath);
 			if (!file) {
 				throw new Error(`File not found: ${relativePath}`);
 			}
 
-			const content = await this.app.vault.read(file as any);
+			const content = await this.app.vault.read(file);
 			return { content };
 		} catch (err) {
 			console.error('File read error:', err);
@@ -392,39 +321,41 @@ export class ACPClient {
 			// Read current file content to show diff
 			const file = this.app.vault.getFileByPath(relativePath);
 			let oldText = '';
+			let contentToWrite = params.content
+			if (!this.settings.autoApproveWritePermission) {
+				if (file) {
+					// File exists, read current content
+					oldText = await this.app.vault.read(file);
+				}
 
-			if (file) {
-				// File exists, read current content
-				oldText = await this.app.vault.read(file);
-			}
+				// Create diff data
+				const diffData: DiffData = {
+					oldText: oldText,
+					newText: params.content,
+					path: relativePath,
+					toolCallId: crypto.randomUUID()
+				};
 
-			// Create diff data
-			const diffData: DiffData = {
-				oldText: oldText,
-				newText: params.content,
-				path: relativePath,
-				toolCallId: Math.random().toString(36).substring(7)
-			};
+				// Open diff view and wait for user approval
+				const diffView = await this.plugin.openDiffView(diffData);
+				if (!diffView) {
+					throw new Error('Failed to open diff view');
+				}
 
-			// Open diff view and wait for user approval
-			const diffView = await this.plugin.openDiffView(diffData);
-			if (!diffView) {
-				throw new Error('Failed to open diff view');
-			}
+				// Wait for user to accept or reject, and get edited content
+				const result = await new Promise<DiffResult>((resolve) => {
+					diffView.setDiffData(diffData, resolve);
+				});
 
-			// Wait for user to accept or reject, and get edited content
-			const result = await new Promise<DiffResult>((resolve) => {
-				diffView.setDiffData(diffData, resolve);
-			});
-
-			if (!result.approved) {
-				throw new Error('User rejected the file write');
+				if (!result.approved) {
+					throw new Error('User rejected the file write');
+				}
+				contentToWrite = result.editedText || params.content;
 			}
 
 			// User approved, proceed with write using edited content if provided
-			const contentToWrite = result.editedText || params.content;
 			if (file) {
-				await this.app.vault.modify(file as any, contentToWrite);
+				await this.app.vault.modify(file, contentToWrite);
 			} else {
 				await this.app.vault.create(relativePath, contentToWrite);
 			}
@@ -462,7 +393,7 @@ export class ACPClient {
 	}
 
 	private async handleTerminalCreate(params: schema.CreateTerminalRequest): Promise<schema.CreateTerminalResponse> {
-		const terminalId = Math.random().toString(36).substring(7);
+		const terminalId = crypto.randomUUID();
 
 		const basePath = this.getVaultPath();
 		const workingDir = params.cwd || basePath;
@@ -478,10 +409,7 @@ export class ACPClient {
 			cwd: workingDir,
 			stdio: ['pipe', 'pipe', 'pipe'],
 			shell: useShell,  // Use shell if it's a full command string
-			env: {
-				...process.env,
-				PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:' + (process.env.PATH || '')
-			}
+			env: process.env,
 		});
 
 		// Initialize output buffer

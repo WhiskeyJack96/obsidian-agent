@@ -4,14 +4,11 @@ import type ACPClientPlugin from './main';
 export const VIEW_TYPE_PLAN = 'acp-plan-view';
 
 export class PlanView extends ItemView {
-	private plugin: ACPClientPlugin;
 	private planContainer: HTMLElement;
 	private planData: any | null = null;
-	private collapsed: boolean = false;
 
-	constructor(leaf: WorkspaceLeaf, plugin: ACPClientPlugin) {
+	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
-		this.plugin = plugin;
 	}
 
 	getViewType(): string {
@@ -31,17 +28,11 @@ export class PlanView extends ItemView {
 		container.empty();
 		container.addClass('acp-plan-view');
 
-		// Create header
 		const header = container.createDiv({ cls: 'acp-plan-header' });
 		header.createEl('strong', { text: 'Agent Plan' });
 
-		// Create plan container
 		this.planContainer = container.createDiv({ cls: 'acp-plan-entries' });
-
-		// Render current plan data if available
-		if (this.planData) {
-			this.updatePlanDisplay();
-		}
+		this.updatePlanDisplay();
 	}
 
 	updatePlan(planData: any): void {

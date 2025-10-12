@@ -62,17 +62,6 @@ export class ACPClientSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Default Model')
-			.setDesc('Default model to use for new sessions (leave empty for agent default)')
-			.addText(text => text
-				.setPlaceholder('claude-3.5-sonnet')
-				.setValue(this.plugin.settings.defaultModel)
-				.onChange(async (value) => {
-					this.plugin.settings.defaultModel = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
 			.setName('Debug Mode')
 			.setDesc('Enable debug logging to console (errors are always logged)')
 			.addToggle(toggle => toggle

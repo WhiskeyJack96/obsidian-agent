@@ -1,11 +1,12 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import type ACPClientPlugin from './main';
+import { Plan } from './types';
 
 export const VIEW_TYPE_PLAN = 'acp-plan-view';
 
 export class PlanView extends ItemView {
 	private planContainer: HTMLElement;
-	private planData: any | null = null;
+	private planData: Plan | null = null;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -35,7 +36,7 @@ export class PlanView extends ItemView {
 		this.updatePlanDisplay();
 	}
 
-	updatePlan(planData: any): void {
+	updatePlan(planData: Plan): void {
 		this.planData = planData;
 		this.updatePlanDisplay();
 	}

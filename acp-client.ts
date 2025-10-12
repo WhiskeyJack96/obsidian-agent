@@ -9,16 +9,7 @@ import { readFile, readFileSync } from 'fs';
 import type ACPClientPlugin from './main';
 import { DiffData, DiffResult } from './diff-view';
 import {shellEnv} from 'shell-env';
-
-export interface SessionModeState {
-	currentModeId: string;
-	availableModes: schema.SessionMode[];
-}
-
-export interface SessionUpdate {
-	type: 'message' | 'tool_call' | 'plan' | 'mode_change' | 'permission_request' | 'turn_complete';
-	data: any;
-}
+import { SessionUpdate, SessionModeState } from './types';
 
 export class ACPClient {
 	private app: App;

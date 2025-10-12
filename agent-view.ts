@@ -1,7 +1,19 @@
 import { ItemView, WorkspaceLeaf, Notice, MarkdownRenderer, Component } from 'obsidian';
-import { ACPClient, SessionUpdate } from './acp-client';
+import { ACPClient } from './acp-client';
 import type ACPClientPlugin from './main';
 import { AutocompleteManager } from './autocomplete-manager';
+import {
+	ToolCallCache,
+	ToolCallUpdateData,
+	ContentBlock,
+	AvailableCommand,
+	RequestPermissionRequest,
+	RequestPermissionResponse,
+	SessionMode,
+	SessionModeState,
+	SessionUpdate,
+	Plan,
+} from './types';
 
 export const VIEW_TYPE_AGENT = 'acp-agent-view';
 
@@ -267,28 +279,35 @@ export class AgentView extends ItemView {
 	}
 
 	handleUpdate(update: SessionUpdate): void {
-		const data = update.data;
-
 		// Handle turn completion - remove pending message when agent is done
 		if (update.type === 'turn_complete') {
 			this.removePendingMessage();
 			if (this.plugin.settings.debug) {
-				console.log('Agent turn completed:', data);
+				console.log('Agent turn completed:', update.data);
 			}
 			return;
 		}
 
 		// Handle mode changes - update UI
 		if (update.type === 'mode_change') {
-			this.updateModeSelector(data);
+			this.updateModeSelector(update.data);
 			return;
 		}
 
 		// Handle permission requests specially
 		if (update.type === 'permission_request') {
-			this.showPermissionRequest(data.params, data.resolve);
+			this.showPermissionRequest(update.data.params, update.data.resolve);
 			return;
 		}
+
+		// Handle plan updates (direct plan data)
+		if (update.type === 'plan') {
+			this.plugin.openPlanView(update.data);
+			return;
+		}
+
+		// For message and tool_call types, data is SessionNotification
+		const data = update.data;
 
 		// Log to console for debugging
 		if (this.plugin.settings.debug) {
@@ -314,19 +333,15 @@ export class AgentView extends ItemView {
 			}
 			// Handle tool call start
 			else if (updateType === 'tool_call') {
-				this.handleToolCallUpdate(updateData);
+				this.handleToolCallUpdate(updateData as unknown as ToolCallUpdateData);
 			}
 			// Handle tool call updates (progress/completion)
 			else if (updateType === 'tool_call_update') {
-				this.handleToolCallUpdate(updateData);
+				this.handleToolCallUpdate(updateData as unknown as ToolCallUpdateData);
 			}
-			// Handle plan updates
-			else if (updateType === 'plan_update' && updateData.plan) {
-				this.showPlan(updateData.plan);
-			}
-			// Handle plan toast (new type)
+			// Handle plan updates (new type)
 			else if (updateType === 'plan' && updateData.entries) {
-				this.plugin.openPlanView(updateData);
+				this.plugin.openPlanView(updateData as unknown as Plan);
 			}
 			// Handle current mode updates
 			else if (updateType === 'current_mode_update' && updateData.currentModeId) {
@@ -347,18 +362,35 @@ export class AgentView extends ItemView {
 	private lastAgentMessage: HTMLElement | null = null;
 	private lastAgentMessageText: string = '';
 	private toolCallElements: Map<string, HTMLElement> = new Map();
-	private toolCallCache: Map<string, { title?: string; rawInput?: any; kind?: string; content?: any[] }> = new Map();
+	private toolCallCache: Map<string, ToolCallCache> = new Map();
 	private commandsMessageElement: HTMLElement | null = null;
 	private pendingMessage: HTMLElement | null = null;
 
-	private async appendToLastAgentMessage(content: any): Promise<void> {
+	private async appendToLastAgentMessage(content: ContentBlock): Promise<void> {
 		if (content.type === 'text' && content.text) {
 			if (!this.lastAgentMessage) {
 				this.lastAgentMessage = this.createAgentMessage();
 				this.lastAgentMessageText = '';
 			}
+
+			// Smart spacing: detect if we need to add paragraph breaks between chunks
+			let textToAdd = content.text;
+			if (this.lastAgentMessageText.length > 0) {
+				const lastChar = this.lastAgentMessageText.trim().slice(-1);
+				const firstChar = content.text.trim()[0];
+
+				// If previous text ends with sentence-ending punctuation and new text starts with uppercase,
+				// it's likely a new thought - add double newline for paragraph break
+				if (/[.!?:]/.test(lastChar) && firstChar && /[A-Z]/.test(firstChar)) {
+					// Only add spacing if there isn't already whitespace at the boundary
+					if (!/\s$/.test(this.lastAgentMessageText) && !/^\s/.test(content.text)) {
+						textToAdd = '\n\n' + content.text;
+					}
+				}
+			}
+
 			// Accumulate text
-			this.lastAgentMessageText += content.text;
+			this.lastAgentMessageText += textToAdd;
 
 			// Clear and re-render with markdown
 			this.lastAgentMessage.empty();
@@ -422,7 +454,7 @@ export class AgentView extends ItemView {
 		}
 	}
 
-	private showAvailableCommands(commands: any[]): void {
+	private showAvailableCommands(commands: AvailableCommand[]): void {
 		// Store commands for autocomplete, minus those that don't make sense in obsidian.
 		const filteredCommands = commands.filter((x) => !["pr-comments", "review", "security-review"].contains(x.name));
 		if (this.autocompleteManager) {
@@ -458,7 +490,7 @@ export class AgentView extends ItemView {
 		this.ensurePendingAtBottom();
 	}
 
-	private async handleToolCallUpdate(updateData: any): Promise<void> {
+	private async handleToolCallUpdate(updateData: ToolCallUpdateData): Promise<void> {
 		this.lastAgentMessage = null; // End current message
 		this.lastAgentMessageText = '';
 
@@ -516,9 +548,9 @@ export class AgentView extends ItemView {
 		// Show content/output if available (only when completed)
 		if (updateData.status === 'completed' && updateData.content && Array.isArray(updateData.content) && updateData.content.length > 0) {
 			for (const block of updateData.content) {
-				if (block.type === 'text' && block.text) {
+				if (block.type === 'content' && block.content.type === 'text') {
 					const outputEl = contentEl.createDiv({ cls: 'acp-tool-output-compact' });
-					this.renderTextContent(block.text, outputEl);
+					this.renderTextContent(block.content.text, outputEl);
 				}
 			}
 		}
@@ -527,7 +559,7 @@ export class AgentView extends ItemView {
 		this.ensurePendingAtBottom();
 	}
 
-	private generateToolTitle(updateData: any): string {
+	private generateToolTitle(updateData: ToolCallCache): string {
 		// If title is provided, use it
 		if (updateData.title) {
 			return updateData.title;
@@ -541,7 +573,7 @@ export class AgentView extends ItemView {
 		}
 		if (rawInput) {
 			// File operations
-			if (rawInput.path) {
+			if (typeof rawInput.path === 'string') {
 				const fileName = rawInput.path.split('/').pop() || rawInput.path;
 				if (kind === 'read') {
 					return `Read file "${fileName}"`;
@@ -551,14 +583,14 @@ export class AgentView extends ItemView {
 			}
 
 			// Terminal commands
-			if (rawInput.command) {
+			if (typeof rawInput.command === 'string') {
 				const command = rawInput.command;
-				const args = rawInput.args ? ` ${rawInput.args.join(' ')}` : '';
+				const args = Array.isArray(rawInput.args) ? ` ${rawInput.args.join(' ')}` : '';
 				return `Run: ${command}${args}`;
 			}
 
 			// Generic description if available
-			if (rawInput.description) {
+			if (typeof rawInput.description === 'string') {
 				return rawInput.description;
 			}
 		}
@@ -621,7 +653,7 @@ export class AgentView extends ItemView {
 		return icons[kind] || '🔧';
 	}
 
-	private showPermissionRequest(params: any, resolve: (response: any) => void): void {
+	private showPermissionRequest(params: RequestPermissionRequest, resolve: (response: RequestPermissionResponse) => void): void {
 		this.lastAgentMessage = null;
 		this.lastAgentMessageText = '';
 
@@ -640,8 +672,9 @@ export class AgentView extends ItemView {
 		// Show compact input info
 		if (params.toolCall && params.toolCall.rawInput) {
 			const inputEl = contentEl.createDiv({ cls: 'acp-permission-input-compact' });
-			const cmd = params.toolCall.rawInput.command;
-			const desc = params.toolCall.rawInput.description;
+			const rawInput = params.toolCall.rawInput;
+			const cmd = typeof rawInput.command === 'string' ? rawInput.command : undefined;
+			const desc = typeof rawInput.description === 'string' ? rawInput.description : undefined;
 			if (cmd) {
 				inputEl.createEl('code', { text: cmd });
 			} else if (desc) {
@@ -675,7 +708,7 @@ export class AgentView extends ItemView {
 		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
 	}
 
-	private async showPlan(plan: any): Promise<void> {
+	private async showPlan(plan: Plan | string): Promise<void> {
 		this.lastAgentMessage = null;
 		this.lastAgentMessageText = '';
 
@@ -688,9 +721,8 @@ export class AgentView extends ItemView {
 		let planText: string;
 		if (typeof plan === 'string') {
 			planText = plan;
-		} else if (plan.description) {
-			planText = plan.description;
 		} else {
+			// Plan is a structured object with entries, render as JSON
 			planText = '```json\n' + JSON.stringify(plan, null, 2) + '\n```';
 		}
 
@@ -701,7 +733,7 @@ export class AgentView extends ItemView {
 	}
 
 
-	private showModeChange(mode: any): void {
+	private showModeChange(mode: SessionMode | string): void {
 		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-system' });
 		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
 
@@ -712,7 +744,7 @@ export class AgentView extends ItemView {
 		this.ensurePendingAtBottom();
 	}
 
-	private updateModeSelector(modeState: any): void {
+	private updateModeSelector(modeState: SessionModeState): void {
 		if (!this.modeSelector || !modeState) {
 			return;
 		}
@@ -801,7 +833,7 @@ export class AgentView extends ItemView {
 		}
 	}
 
-	private showDebugMessage(data: any): void {
+	private showDebugMessage(data: unknown): void {
 		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-debug' });
 		const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
 		senderEl.setText('Debug');

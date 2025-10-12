@@ -5,6 +5,7 @@ import { PlanView, VIEW_TYPE_PLAN } from './plan-view';
 import { DiffView, VIEW_TYPE_DIFF, DiffData } from './diff-view';
 import { ACPClientSettingTab } from './settings-tab';
 import { ACPClientSettings, DEFAULT_SETTINGS } from './settings';
+import { Plan } from './types';
 
 export default class ACPClientPlugin extends Plugin {
 	settings: ACPClientSettings;
@@ -150,7 +151,7 @@ export default class ACPClientPlugin extends Plugin {
 		return null;
 	}
 
-	async openPlanView(planData: any): Promise<void> {
+	async openPlanView(planData: Plan): Promise<void> {
 		const { workspace } = this.app;
 		const leaf = await workspace.ensureSideLeaf(VIEW_TYPE_PLAN, "right", {
 			reveal: true,

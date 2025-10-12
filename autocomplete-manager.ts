@@ -9,13 +9,6 @@ interface AutocompleteItem {
 	triggerPos: number;
 }
 
-interface AutocompleteType {
-	triggerCharacter: string
-	completions: string[]
-	
-
-}
-
 export class AutocompleteManager {
 	private app: App;
 	private inputField: HTMLTextAreaElement;

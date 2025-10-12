@@ -85,6 +85,7 @@ export interface ToolCallCache {
 	rawInput?: Record<string, unknown>;
 	kind?: schema.ToolKind;
 	content?: schema.ToolCallContent[];
+	status?: schema.ToolCallStatus;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Notice, MarkdownRenderer, Component } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice, Component } from 'obsidian';
 import { ACPClient } from './acp-client';
 import type ACPClientPlugin from './main';
 import { AutocompleteManager } from './autocomplete-manager';
@@ -14,6 +14,15 @@ import {
 	SessionUpdate,
 	Plan,
 } from './types';
+import { MessageRenderer } from './messages/message-renderer';
+import {
+	TextMessage,
+	ToolCallMessage,
+	PermissionRequestMessage,
+	CommandsMessage,
+	PendingMessage,
+	DebugMessage,
+} from './messages';
 
 export const VIEW_TYPE_AGENT = 'acp-agent-view';
 
@@ -38,6 +47,10 @@ export class AgentView extends ItemView {
 	private component: Component;
 	private autocompleteManager: AutocompleteManager | null = null;
 	private connectionState: ConnectionState = ConnectionState.NOT_CONNECTED;
+	private messageRenderer: MessageRenderer;
+	private currentAgentMessageId: string | null = null;
+	private commandsMessageId: string | null = null;
+	private toolCallCache: Map<string, ToolCallCache> = new Map();
 
 	constructor(leaf: WorkspaceLeaf, plugin: ACPClientPlugin) {
 		super(leaf);
@@ -93,6 +106,9 @@ export class AgentView extends ItemView {
 
 		// Create messages container
 		this.messagesContainer = container.createDiv({ cls: 'acp-messages' });
+
+		// Initialize message renderer
+		this.messageRenderer = new MessageRenderer(this.messagesContainer, this.component);
 
 		// Create input container
 		this.inputContainer = container.createDiv({ cls: 'acp-input-container' });
@@ -203,13 +219,10 @@ export class AgentView extends ItemView {
 	}
 
 	clearMessages(): void {
-		this.messagesContainer.empty();
-		this.lastAgentMessage = null;
-		this.lastAgentMessageText = '';
-		this.toolCallElements.clear();
+		this.messageRenderer.clear();
+		this.currentAgentMessageId = null;
+		this.commandsMessageId = null;
 		this.toolCallCache.clear();
-		this.commandsMessageElement = null;
-		this.pendingMessage = null;
 
 		// Reset mode selector
 		if (this.modeSelector) {
@@ -359,140 +372,84 @@ export class AgentView extends ItemView {
 		}
 	}
 
-	private lastAgentMessage: HTMLElement | null = null;
-	private lastAgentMessageText: string = '';
-	private toolCallElements: Map<string, HTMLElement> = new Map();
-	private toolCallCache: Map<string, ToolCallCache> = new Map();
-	private commandsMessageElement: HTMLElement | null = null;
-	private pendingMessage: HTMLElement | null = null;
 
 	private async appendToLastAgentMessage(content: ContentBlock): Promise<void> {
 		if (content.type === 'text' && content.text) {
-			if (!this.lastAgentMessage) {
-				this.lastAgentMessage = this.createAgentMessage();
-				this.lastAgentMessageText = '';
+			// Create new agent message if we don't have one
+			if (!this.currentAgentMessageId) {
+				this.currentAgentMessageId = `agent-${Date.now()}`;
+				const message = new TextMessage(this.currentAgentMessageId, 'agent', '', this.component);
+				await this.messageRenderer.addMessage(message);
 			}
 
-			// Smart spacing: detect if we need to add paragraph breaks between chunks
-			let textToAdd = content.text;
-			if (this.lastAgentMessageText.length > 0) {
-				const lastChar = this.lastAgentMessageText.trim().slice(-1);
-				const firstChar = content.text.trim()[0];
+			// Get current message and accumulate text
+			const currentMessage = this.messageRenderer.getMessage(this.currentAgentMessageId);
+			if (currentMessage && currentMessage instanceof TextMessage) {
+				const currentText = currentMessage.getContent();
 
-				// If previous text ends with sentence-ending punctuation and new text starts with uppercase,
-				// it's likely a new thought - add double newline for paragraph break
-				if (/[.!?:]/.test(lastChar) && firstChar && /[A-Z]/.test(firstChar)) {
-					// Only add spacing if there isn't already whitespace at the boundary
-					if (!/\s$/.test(this.lastAgentMessageText) && !/^\s/.test(content.text)) {
-						textToAdd = '\n\n' + content.text;
+				// Smart spacing: detect if we need to add paragraph breaks between chunks
+				let textToAdd = content.text;
+				if (currentText.length > 0) {
+					const lastChar = currentText.trim().slice(-1);
+					const firstChar = content.text.trim()[0];
+
+					// If previous text ends with sentence-ending punctuation and new text starts with uppercase,
+					// it's likely a new thought - add double newline for paragraph break
+					if (/[.!?:]/.test(lastChar) && firstChar && /[A-Z]/.test(firstChar)) {
+						// Only add spacing if there isn't already whitespace at the boundary
+						if (!/\s$/.test(currentText) && !/^\s/.test(content.text)) {
+							textToAdd = '\n\n' + content.text;
+						}
 					}
 				}
+
+				// Update message with accumulated text
+				const newText = currentText + textToAdd;
+				await currentMessage.update(newText);
 			}
-
-			// Accumulate text
-			this.lastAgentMessageText += textToAdd;
-
-			// Clear and re-render with markdown
-			this.lastAgentMessage.empty();
-			await MarkdownRenderer.renderMarkdown(
-				this.lastAgentMessageText,
-				this.lastAgentMessage,
-				'',
-				this.component
-			);
-
-			// Ensure pending message stays at bottom
-			this.ensurePendingAtBottom();
 		}
 	}
 
-	private createAgentMessage(): HTMLElement {
-		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-agent' });
-		const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
-		senderEl.setText('Agent');
-		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
-		return contentEl;
-	}
 
 	private showPendingMessage(): void {
 		// Remove any existing pending message first
 		this.removePendingMessage();
 
-		// Create pending message bubble
-		this.pendingMessage = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-pending' });
-		const senderEl = this.pendingMessage.createDiv({ cls: 'acp-message-sender' });
-		senderEl.setText('Agent');
-		const contentEl = this.pendingMessage.createDiv({ cls: 'acp-message-content' });
-
-		// Add loading dots
-		const loadingEl = contentEl.createDiv({ cls: 'acp-loading-dots' });
-		loadingEl.createSpan({ cls: 'acp-loading-dot' });
-		loadingEl.createSpan({ cls: 'acp-loading-dot' });
-		loadingEl.createSpan({ cls: 'acp-loading-dot' });
+		// Create pending message
+		const pendingId = 'pending';
+		const message = new PendingMessage(pendingId, this.component);
+		this.messageRenderer.addMessage(message);
 
 		// Show cancel button
 		this.cancelButton.style.display = 'block';
-
-		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
 	}
 
 	private removePendingMessage(): void {
-		if (this.pendingMessage) {
-			this.pendingMessage.remove();
-			this.pendingMessage = null;
-		}
+		this.messageRenderer.removePendingMessage();
 
 		// Hide cancel button when no pending message
 		this.cancelButton.style.display = 'none';
 	}
 
-	private ensurePendingAtBottom(): void {
-		// If pending message exists, move it to the bottom of the messages container
-		if (this.pendingMessage && this.pendingMessage.parentElement === this.messagesContainer) {
-			this.messagesContainer.appendChild(this.pendingMessage);
-			this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
-		}
-	}
-
-	private showAvailableCommands(commands: AvailableCommand[]): void {
+	private async showAvailableCommands(commands: AvailableCommand[]): Promise<void> {
 		// Store commands for autocomplete, minus those that don't make sense in obsidian.
 		const filteredCommands = commands.filter((x) => !["pr-comments", "review", "security-review"].contains(x.name));
 		if (this.autocompleteManager) {
 			this.autocompleteManager.setAvailableCommands(filteredCommands);
 		}
 
-		// Reuse existing commands message element if it exists
-		let messageEl: HTMLElement;
-		let contentEl: HTMLElement;
-
-		if (this.commandsMessageElement) {
-			messageEl = this.commandsMessageElement;
-			contentEl = messageEl.querySelector('.acp-message-content') as HTMLElement;
-			contentEl.empty();
+		// Reuse existing commands message if it exists, otherwise create new one
+		if (this.commandsMessageId && this.messageRenderer.hasMessage(this.commandsMessageId)) {
+			await this.messageRenderer.updateMessage(this.commandsMessageId, filteredCommands);
 		} else {
-			messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-system' });
-			contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
-			this.commandsMessageElement = messageEl;
+			this.commandsMessageId = 'commands';
+			const message = new CommandsMessage(this.commandsMessageId, filteredCommands, this.component);
+			await this.messageRenderer.addMessage(message);
 		}
-
-		contentEl.createEl('strong', { text: 'Available Commands:' });
-		const commandList = contentEl.createEl('ul', { cls: 'acp-command-list' });
-
-		for (const cmd of filteredCommands) {
-			const item = commandList.createEl('li');
-			item.createEl('code', { text: `/${cmd.name}`, cls: 'acp-command-name' });
-			if (cmd.description) {
-				item.appendText(` - ${cmd.description}`);
-			}
-		}
-
-		// Ensure pending message stays at bottom
-		this.ensurePendingAtBottom();
 	}
 
 	private async handleToolCallUpdate(updateData: ToolCallUpdateData): Promise<void> {
-		this.lastAgentMessage = null; // End current message
-		this.lastAgentMessageText = '';
+		this.currentAgentMessageId = null; // End current message
 
 		const toolCallId = updateData.toolCallId;
 		// Get cached permission details if available
@@ -505,206 +462,37 @@ export class AgentView extends ItemView {
 			// Preserve cached rawInput if updateData doesn't have it
 			rawInput: updateData.rawInput || cachedDetails?.rawInput
 		};
+
 		// Clear completed tool calls out of the cache to keep it from getting very large
-		if (mergedData.status == "completed") {
-			this.toolCallCache.delete(toolCallId)
+		if (mergedData.status === "completed") {
+			this.toolCallCache.delete(toolCallId);
 		} else {
-			this.toolCallCache.set(toolCallId, mergedData)
+			this.toolCallCache.set(toolCallId, mergedData);
 		}
 
 		// Check if we already have a message for this tool call
-		let messageEl = toolCallId ? this.toolCallElements.get(toolCallId) : null;
-
-		if (!messageEl) {
+		if (toolCallId && this.messageRenderer.hasMessage(toolCallId)) {
+			// Update existing message
+			await this.messageRenderer.updateMessage(toolCallId, mergedData);
+		} else if (toolCallId) {
 			// Create new message for this tool call
-			messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-tool' });
-
-			if (toolCallId) {
-				this.toolCallElements.set(toolCallId, messageEl);
-			}
-		}
-
-		// Find or create content container
-		let contentEl = messageEl.querySelector('.acp-message-content') as HTMLElement;
-		if (!contentEl) {
-			contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
-		} else {
-			// Clear and rebuild content
-			contentEl.empty();
-		}
-
-		// Compact header with tool info and status
-		const toolHeader = contentEl.createDiv({ cls: 'acp-tool-compact-header' });
-
-		// Generate descriptive title using merged data
-		const titleText = this.generateToolTitle(mergedData);
-		toolHeader.createSpan({ text: titleText, cls: 'acp-tool-title' });
-
-		// Show tool status badge if available
-		if (updateData.status) {
-			const statusBadge = toolHeader.createEl('span', { cls: `acp-tool-status-badge acp-tool-status-${updateData.status}` });
-		}
-
-		// Show content/output if available (only when completed)
-		if (updateData.status === 'completed' && updateData.content && Array.isArray(updateData.content) && updateData.content.length > 0) {
-			for (const block of updateData.content) {
-				if (block.type === 'content' && block.content.type === 'text') {
-					const outputEl = contentEl.createDiv({ cls: 'acp-tool-output-compact' });
-					this.renderTextContent(block.content.text, outputEl);
-				}
-			}
-		}
-
-		// Ensure pending message stays at bottom
-		this.ensurePendingAtBottom();
-	}
-
-	private generateToolTitle(updateData: ToolCallCache): string {
-		// If title is provided, use it
-		if (updateData.title) {
-			return updateData.title;
-		}
-
-		// Try to extract meaningful info from rawInput
-		const rawInput = updateData.rawInput;
-		const kind = updateData.kind;
-		if (this.plugin.settings.debug) {
-			console.log(updateData);
-		}
-		if (rawInput) {
-			// File operations
-			if (typeof rawInput.path === 'string') {
-				const fileName = rawInput.path.split('/').pop() || rawInput.path;
-				if (kind === 'read') {
-					return `Read file "${fileName}"`;
-				} else if (kind === 'edit') {
-					return `Write file "${fileName}"`;
-				}
-			}
-
-			// Terminal commands
-			if (typeof rawInput.command === 'string') {
-				const command = rawInput.command;
-				const args = Array.isArray(rawInput.args) ? ` ${rawInput.args.join(' ')}` : '';
-				return `Run: ${command}${args}`;
-			}
-
-			// Generic description if available
-			if (typeof rawInput.description === 'string') {
-				return rawInput.description;
-			}
-		}
-
-		// Fallback to kind or generic text
-		return kind || 'Tool Call';
-	}
-
-	private renderTextContent(text: string, container: HTMLElement): void {
-		// Check if text contains markdown code blocks
-		const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-		let lastIndex = 0;
-		let match;
-
-		while ((match = codeBlockRegex.exec(text)) !== null) {
-			// Add text before code block
-			if (match.index > lastIndex) {
-				const textBefore = text.substring(lastIndex, match.index);
-				if (textBefore.trim()) {
-					container.appendText(textBefore);
-				}
-			}
-
-			// Add code block
-			const language = match[1] || '';
-			const code = match[2];
-			const pre = container.createEl('pre');
-			const codeEl = pre.createEl('code');
-			if (language) {
-				codeEl.addClass(`language-${language}`);
-			}
-			codeEl.setText(code);
-
-			lastIndex = match.index + match[0].length;
-		}
-
-		// Add remaining text
-		if (lastIndex < text.length) {
-			const remainingText = text.substring(lastIndex);
-			if (remainingText.trim()) {
-				container.appendText(remainingText);
-			}
-		}
-
-		// If no code blocks were found, just set the text
-		if (lastIndex === 0) {
-			container.setText(text);
+			const message = new ToolCallMessage(toolCallId, mergedData, this.component);
+			await this.messageRenderer.addMessage(message);
 		}
 	}
+
 
 	private showPermissionRequest(params: RequestPermissionRequest, resolve: (response: RequestPermissionResponse) => void): void {
-		this.lastAgentMessage = null;
-		this.lastAgentMessageText = '';
+		this.currentAgentMessageId = null;
 
-		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-permission' });
-		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
-
-		// Show what permission is being requested
-		const headerEl = contentEl.createDiv({ cls: 'acp-permission-header' });
-		headerEl.createEl('strong', { text: '🔐 Permission Required' });
-
-		if (params.toolCall && params.toolCall.title) {
-			const titleEl = contentEl.createDiv({ cls: 'acp-permission-tool-title' });
-			titleEl.setText(params.toolCall.title);
-		}
-
-		// Show compact input info
-		if (params.toolCall && params.toolCall.rawInput) {
-			const inputEl = contentEl.createDiv({ cls: 'acp-permission-input-compact' });
-			const rawInput = params.toolCall.rawInput;
-			const cmd = typeof rawInput.command === 'string' ? rawInput.command : undefined;
-			const desc = typeof rawInput.description === 'string' ? rawInput.description : undefined;
-			if (cmd) {
-				inputEl.createEl('code', { text: cmd });
-			} else if (desc) {
-				inputEl.setText(desc);
-			}
-		}
-
-		// Create action buttons
-		const actionsEl = contentEl.createDiv({ cls: 'acp-permission-actions' });
-
-		for (const option of params.options) {
-			const button = actionsEl.createEl('button', {
-				cls: `acp-permission-btn acp-permission-${option.kind}`,
-				text: option.name
-			});
-
-			button.addEventListener('click', () => {
-				// Remove the permission request message
-				messageEl.remove();
-
-				// Resolve with selected option
-				resolve({
-					outcome: {
-						outcome: 'selected',
-						optionId: option.optionId
-					}
-				});
-			});
-		}
-
-		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+		const permissionId = `permission-${Date.now()}`;
+		const message = new PermissionRequestMessage(permissionId, params, resolve, this.component);
+		this.messageRenderer.addMessage(message);
 	}
 
-	private showModeChange(mode: SessionMode | string): void {
-		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-system' });
-		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
-
+	private async showModeChange(mode: SessionMode | string): Promise<void> {
 		const modeName = typeof mode === 'string' ? mode : (mode.name || 'unknown');
-		contentEl.setText(`Mode changed to: ${modeName}`);
-
-		// Ensure pending message stays at bottom
-		this.ensurePendingAtBottom();
+		await this.addMessage('system', `Mode changed to: ${modeName}`);
 	}
 
 	private updateModeSelector(modeState: SessionModeState): void {
@@ -797,46 +585,25 @@ export class AgentView extends ItemView {
 	}
 
 	private showDebugMessage(data: unknown): void {
-		const messageEl = this.messagesContainer.createDiv({ cls: 'acp-message acp-message-debug' });
-		const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
-		senderEl.setText('Debug');
-
-		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
-		const pre = contentEl.createEl('pre', { cls: 'acp-debug-json' });
-		pre.setText(JSON.stringify(data, null, 2));
-
-		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+		const debugId = `debug-${Date.now()}`;
+		const message = new DebugMessage(debugId, data, this.component);
+		this.messageRenderer.addMessage(message);
 	}
 
 	async addMessage(sender: 'user' | 'agent' | 'system', content: string): Promise<void> {
-		// Reset last agent message tracker when adding a new message
+		// Reset current agent message tracker when adding a new non-agent message
 		if (sender === 'user' || sender === 'system') {
-			this.lastAgentMessage = null;
-			this.lastAgentMessageText = '';
+			this.currentAgentMessageId = null;
 		}
 
-		const messageEl = this.messagesContainer.createDiv({ cls: `acp-message acp-message-${sender}` });
-
-		const senderEl = messageEl.createDiv({ cls: 'acp-message-sender' });
-		senderEl.setText(sender.charAt(0).toUpperCase() + sender.slice(1));
-
-		const contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
-
-		// Render markdown for user and agent messages
-		if (sender === 'user' || sender === 'agent') {
-			await MarkdownRenderer.renderMarkdown(content, contentEl, '', this.component);
-		} else {
-			// System messages remain as plain text
-			contentEl.setText(content);
-		}
+		const messageId = `${sender}-${Date.now()}-${Math.random()}`;
+		const message = new TextMessage(messageId, sender, content, this.component);
 
 		if (sender === 'agent') {
-			this.lastAgentMessage = contentEl;
-			this.lastAgentMessageText = content;
+			this.currentAgentMessageId = messageId;
 		}
 
-		// Scroll to bottom
-		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+		await this.messageRenderer.addMessage(message);
 	}
 
 	async onClose(): Promise<void> {

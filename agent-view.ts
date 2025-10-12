@@ -246,7 +246,7 @@ export class AgentView extends ItemView {
 
 		try {
 			await this.client.cancelSession();
-			this.removePendingMessage();
+			this.endAgentTurn();
 			this.addMessage('system', 'Agent turn cancelled.');
 		} catch (err) {
 			new Notice(`Failed to cancel: ${err.message}`);
@@ -268,23 +268,20 @@ export class AgentView extends ItemView {
 		this.addMessage('user', message);
 		this.inputField.value = '';
 
-		// Show pending message immediately while waiting for agent response
-		this.showPendingMessage();
+		this.startAgentTurn();
 
 		try {
 			await this.client.sendPrompt(message);
 		} catch (err) {
 			new Notice(`Failed to send message: ${err.message}`);
 			console.error('Send error:', err);
-			// Remove pending message on error
-			this.removePendingMessage();
+			this.endAgentTurn();
 		}
 	}
 
 	handleUpdate(update: SessionUpdate): void {
-		// Handle turn completion - remove pending message when agent is done
 		if (update.type === 'turn_complete') {
-			this.removePendingMessage();
+			this.endAgentTurn();
 			if (this.plugin.settings.debug) {
 				console.log('Agent turn completed:', update.data);
 			}
@@ -311,16 +308,13 @@ export class AgentView extends ItemView {
 
 		// For message and tool_call types, data is SessionNotification
 		const data = update.data;
-
-		// Log to console for debugging
 		if (this.plugin.settings.debug) {
 			console.log('Session update received:', data);
 		}
 
-		// Handle different session update types based on ACP spec
 		if (data.update) {
 			const updateData = data.update;
-			const updateType = updateData.sessionUpdate; // Note: it's sessionUpdate, not sessionUpdateType
+			const updateType = updateData.sessionUpdate;
 
 			if (this.plugin.settings.debug) {
 				console.log('Update type:', updateType);
@@ -330,36 +324,25 @@ export class AgentView extends ItemView {
 			if (updateType === 'agent_message_chunk' && updateData.content) {
 				this.appendToLastAgentMessage(updateData.content);
 			}
-			// Handle available commands update
 			else if (updateType === 'available_commands_update' && updateData.availableCommands) {
 				this.showAvailableCommands(updateData.availableCommands);
 			}
-			// Handle tool call start
 			else if (updateType === 'tool_call') {
 				this.handleToolCallUpdate(updateData);
 			}
-			// Handle tool call updates (progress/completion)
 			else if (updateType === 'tool_call_update') {
 				this.handleToolCallUpdate(updateData);
 			}
-			// Handle plan updates (new type)
 			else if (updateType === 'plan' && updateData.entries) {
 				this.plugin.openPlanView(updateData);
 			}
-			// Handle current mode updates
 			else if (updateType === 'current_mode_update' && updateData.currentModeId) {
 				this.updateCurrentMode(updateData.currentModeId);
 			}
-			// Fallback: show as formatted JSON for debugging
-			else {
-				console.warn('Unhandled update type:', updateType, updateData);
-				this.showDebugMessage(updateData);
-			}
-		} else {
-			// No update field, might be a different structure
-			console.warn('Update without update field:', data);
-			this.showDebugMessage(data);
 		}
+		// No update field, might be a different structure
+		console.warn('Unhandled type:', data);
+		this.showDebugMessage(data);
 	}
 
 
@@ -368,23 +351,13 @@ export class AgentView extends ItemView {
 	}
 
 
-	private showPendingMessage(): void {
-		// Remove any existing pending message first
-		this.removePendingMessage();
-
-		// Create pending message
-		const pendingId = 'pending';
-		const message = new PendingMessage(pendingId, this.component);
-		this.messageRenderer.addMessage(message);
-
-		// Show cancel button
+	private startAgentTurn(): void {
+		this.messageRenderer.addMessage(new PendingMessage('pending', this.component));
 		this.cancelButton.style.display = 'block';
 	}
 
-	private removePendingMessage(): void {
+	private endAgentTurn(): void {
 		this.messageRenderer.removePendingMessage();
-
-		// Hide cancel button when no pending message
 		this.cancelButton.style.display = 'none';
 	}
 

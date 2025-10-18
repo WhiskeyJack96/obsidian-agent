@@ -1,9 +1,9 @@
 {
-	"id": "obsidian-acp",
-	"name": "Obsidian ACP Client",
+	"id": "obsidian-agent",
+	"name": "Obsidian Agent",
 	"version": "0.1.0",
 	"minAppVersion": "1.9.0",
-	"description": "Enables an Agent Client Protocol (ACP) client, allowing communication with AI agents.",
+	"description": "Enables an AI Agent that uses Agent Client Protocol (ACP), to communicate directly with your notes.",
 	"author": "Jacob Mikesell",
 	"authorUrl": "",
 	"isDesktopOnly": true

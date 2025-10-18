@@ -68,13 +68,6 @@ COMING SOON! If you get this working let me know and we can tag team the docs :D
    - **Agent Arguments**: Command-line arguments to pass to the agent (comma-separated)
    - **Auto-approve Write Permissions**: Automatically approve file write requests only, some form of vault backup _HIGHLY_ recommended
    - **Auto-approve Read Permissions**: Automatically approve file read requests only
-   - **Default Model**: Default model to use for new sessions (optional)
-
-### Example Configuration
-
-For an agent executable at `/usr/local/bin/my-agent`:
-- **Agent Command**: `/usr/local/bin/my-agent`
-- **Agent Arguments**: `--config, /path/to/config.json`
 
 ## Usage
 
@@ -117,49 +110,7 @@ The plugin adds the following commands to Obsidian:
 
 ## Agent Client Protocol
 
-This plugin implements the [Agent Client Protocol](https://agentclientprotocol.com/) specification, which defines:
-
-- JSON-RPC 2.0 communication over stdin/stdout
-- File system operations (read/write text files)
-- Terminal operations (create, execute, monitor)
-- Permission requests and inline approval UI
-- Session management and streaming updates
-
-### Supported Client Methods
-
-The plugin implements all required ACP client methods:
-
-- `fs/read_text_file`: Read files from the vault (with path conversion)
-- `fs/write_text_file`: Write/create files in the vault (with path conversion)
-- `session/request_permission`: Display inline permission UI with approve/deny buttons
-- `terminal/create`: Spawn subprocess and collect output from creation
-- `terminal/output`: Return combined stdout/stderr collected since terminal creation
-- `terminal/kill`: Terminate running subprocess
-- `terminal/release`: Kill and remove subprocess from tracking
-- `terminal/wait_for_exit`: Promise-based wait for subprocess exit
-- `session/update`: Handle streaming agent messages, tool calls, and plans
-
-## UI Features
-
-### Chat Interface
-
-- **Streaming Messages**: Agent responses stream in real-time with markdown rendering
-- **Tool Call Display**: Shows agent tool calls with status badges (running, completed, failed)
-- **Permission Requests**: Inline approval UI appears when agent requests permissions
-- **Available Commands**: Agent displays available slash commands for easy discovery
-- **Status Indicator**: Shows connection status (Not connected, Connecting, Connected, Session active)
-
-### Path Handling
-
-The plugin automatically converts between:
-- Absolute paths (used by the agent)
-- Vault-relative paths (used by Obsidian's API)
-
-Multiple fallback methods ensure reliable vault path detection across different Obsidian configurations.
-
-### Terminal Output
-
-Terminal output is collected continuously from the moment a terminal is created. This ensures no output is lost, even if the agent requests output later.
+This plugin implements the [Agent Client Protocol](https://agentclientprotocol.com/) specification.
 
 ## Development
 

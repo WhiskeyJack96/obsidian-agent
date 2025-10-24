@@ -3,6 +3,7 @@ import { ACPClient } from './acp-client';
 import type ACPClientPlugin from './main';
 import { AutocompleteManager } from './autocomplete-manager';
 import { ModeManager } from './mode-manager';
+import { GitIntegration } from './git-integration';
 import {
 	ContentBlock,
 	AvailableCommand,
@@ -33,11 +34,14 @@ enum ConnectionState {
 export class AgentView extends ItemView {
 	private plugin: ACPClientPlugin;
 	private client: ACPClient | null = null;
+	private gitIntegration: GitIntegration | null = null;
 	private messagesContainer: HTMLElement;
 	private inputContainer: HTMLElement;
 	private inputField: HTMLTextAreaElement;
 	private statusIndicator: HTMLElement;
 	private cancelButton: HTMLElement;
+	private sessionIdInput: HTMLInputElement;
+	private loadSessionButton: HTMLElement;
 	private modeManager: ModeManager | null = null;
 	private component: Component;
 	private autocompleteManager: AutocompleteManager | null = null;
@@ -79,8 +83,7 @@ export class AgentView extends ItemView {
 		// Create mode manager
 		this.modeManager = new ModeManager(
 			statusBarContainer,
-			(modeName) => this.addMessage('system', `Mode changed to: ${modeName}`),
-			this.plugin.settings.debug
+			(modeName) => this.addMessage('system', `Mode changed to: ${modeName}`)
 		);
 
 		const newConversationButton = statusBarContainer.createEl('button', {
@@ -89,11 +92,28 @@ export class AgentView extends ItemView {
 		});
 		newConversationButton.addEventListener('click', () => this.newConversation());
 
+		// Add session loading controls (initially hidden until we know agent capabilities)
+		this.sessionIdInput = statusBarContainer.createEl('input', {
+			cls: 'acp-session-id-input',
+			attr: {
+				type: 'text',
+				placeholder: 'Session ID'
+			}
+		});
+		this.sessionIdInput.addClass('acp-hidden');
+
+		this.loadSessionButton = statusBarContainer.createEl('button', {
+			cls: 'acp-load-session-button',
+			text: 'Load Session'
+		});
+		this.loadSessionButton.addClass('acp-hidden');
+		this.loadSessionButton.addEventListener('click', () => this.loadExistingSession());
+
 		this.cancelButton = statusBarContainer.createEl('button', {
 			cls: 'acp-cancel-button',
 			text: 'Cancel'
 		});
-		this.cancelButton.style.display = 'none'; // Initially hidden
+		this.cancelButton.addClass('acp-hidden');
 		this.cancelButton.addEventListener('click', () => this.cancelCurrentTurn());
 
 		// Create messages container
@@ -106,8 +126,7 @@ export class AgentView extends ItemView {
 		this.inputContainer = container.createDiv({ cls: 'acp-input-container' });
 
 		// Create autocomplete container (positioned absolutely above input)
-		const autocompleteContainer = this.inputContainer.createDiv({ cls: 'acp-autocomplete' });
-		autocompleteContainer.style.display = 'none';
+		const autocompleteContainer = this.inputContainer.createDiv({ cls: 'acp-autocomplete acp-hidden' });
 
 		this.inputField = this.inputContainer.createEl('textarea', {
 			cls: 'acp-input',
@@ -164,6 +183,21 @@ export class AgentView extends ItemView {
 		}
 	}
 
+	private updateLoadSessionControls(): void {
+		if (!this.client) return;
+
+		const supportsLoadSession = this.client.supportsLoadSession();
+
+		if (this.sessionIdInput && this.loadSessionButton) {
+			this.sessionIdInput.toggleClass('acp-hidden', !supportsLoadSession);
+			this.loadSessionButton.toggleClass('acp-hidden', !supportsLoadSession);
+		}
+	}
+
+	setGitIntegration(gitIntegration: GitIntegration): void {
+		this.gitIntegration = gitIntegration;
+	}
+
 	private updateConnectionState(state: ConnectionState): void {
 		this.connectionState = state;
 		// Update status text based on state
@@ -188,9 +222,6 @@ export class AgentView extends ItemView {
 		if (this.connectionState === ConnectionState.CONNECTING ||
 			this.connectionState === ConnectionState.CONNECTED ||
 			this.connectionState === ConnectionState.SESSION_ACTIVE) {
-			if (this.plugin.settings.debug) {
-				console.log('Already connected or connecting, skipping connect()');
-			}
 			return;
 		}
 
@@ -199,8 +230,17 @@ export class AgentView extends ItemView {
 			await this.client.initialize();
 			this.updateConnectionState(ConnectionState.CONNECTED);
 
+			// Update load session controls visibility based on agent capabilities
+			this.updateLoadSessionControls();
+
 			await this.client.createSession();
 			this.updateConnectionState(ConnectionState.SESSION_ACTIVE);
+
+			// Show session ID to user
+			const sessionId = this.client.getSessionId();
+			if (sessionId) {
+				this.addMessage('system', `Session started. Session ID: ${sessionId}`);
+			}
 		} catch (err) {
 			this.updateConnectionState(ConnectionState.CONNECTION_FAILED);
 			new Notice(`Failed to connect: ${err.message}`);
@@ -240,6 +280,54 @@ export class AgentView extends ItemView {
 
 		// Reconnect
 		await this.connect();
+	}
+
+	async loadExistingSession(): Promise<void> {
+		if (!this.client) {
+			new Notice('Client not initialized');
+			return;
+		}
+
+		const sessionId = this.sessionIdInput.value.trim();
+		if (!sessionId) {
+			new Notice('Please enter a session ID');
+			return;
+		}
+
+		try {
+			// Clean up current session if exists
+			await this.client.cleanup();
+			this.clearMessages();
+
+			// Reset connection state
+			this.updateConnectionState(ConnectionState.NOT_CONNECTED);
+
+			// Initialize connection
+			this.updateConnectionState(ConnectionState.CONNECTING);
+			await this.client.initialize();
+			this.updateConnectionState(ConnectionState.CONNECTED);
+
+			// Update load session controls visibility based on agent capabilities
+			this.updateLoadSessionControls();
+
+			// Check if agent supports load session
+			if (!this.client.supportsLoadSession()) {
+				throw new Error('Agent does not support loading sessions');
+			}
+
+			// Load the session instead of creating new one
+			await this.client.loadSession(sessionId);
+			this.updateConnectionState(ConnectionState.SESSION_ACTIVE);
+
+			this.addMessage('system', `Successfully loaded session: ${sessionId}`);
+
+			// Clear the input field
+			this.sessionIdInput.value = '';
+		} catch (err) {
+			this.updateConnectionState(ConnectionState.CONNECTION_FAILED);
+			new Notice(`Failed to load session: ${err.message}`);
+			console.error('Load session error:', err);
+		}
 	}
 
 	async cancelCurrentTurn(): Promise<void> {
@@ -286,9 +374,14 @@ export class AgentView extends ItemView {
 	handleUpdate(update: SessionUpdate): void {
 		if (update.type === 'turn_complete') {
 			this.endAgentTurn();
-			if (this.plugin.settings.debug) {
-				console.log('Agent turn completed:', update.data);
+
+			// Trigger git integration if enabled
+			if (this.plugin.settings.enableGitIntegration && this.gitIntegration) {
+				this.gitIntegration.promptCommit().catch((err) => {
+					console.error('Git integration error:', err);
+				});
 			}
+
 			return;
 		}
 
@@ -314,17 +407,10 @@ export class AgentView extends ItemView {
 
 		// For message and tool_call types, data is SessionNotification
 		const data = update.data;
-		if (this.plugin.settings.debug) {
-			console.log('Session update received:', data);
-		}
 
 		if (data.update) {
 			const updateData = data.update;
 			const updateType = updateData.sessionUpdate;
-
-			if (this.plugin.settings.debug) {
-				console.log('Update type:', updateType);
-			}
 
 			// Handle agent message chunks (streaming text)
 			if (updateType === 'agent_message_chunk' && updateData.content) {
@@ -367,12 +453,12 @@ export class AgentView extends ItemView {
 
 	private startAgentTurn(): void {
 		this.messageRenderer.addMessage(new PendingMessage('pending', this.component));
-		this.cancelButton.style.display = 'block';
+		this.cancelButton.removeClass('acp-hidden');
 	}
 
 	private endAgentTurn(): void {
 		this.messageRenderer.removePendingMessage();
-		this.cancelButton.style.display = 'none';
+		this.cancelButton.addClass('acp-hidden');
 	}
 
 	private async showAvailableCommands(commands: AvailableCommand[]): Promise<void> {

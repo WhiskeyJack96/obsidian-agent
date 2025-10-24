@@ -3,8 +3,8 @@ export interface ACPClientSettings {
 	agentArgs: string[];
 	autoApproveWritePermission: boolean;
 	autoApproveReadPermission: boolean;
-	debug: boolean;
 	obsidianFocussedPrompt: boolean;
+	enableGitIntegration: boolean;
 }
 
 export const DEFAULT_SETTINGS: ACPClientSettings = {
@@ -12,6 +12,6 @@ export const DEFAULT_SETTINGS: ACPClientSettings = {
 	agentArgs: [],
 	autoApproveWritePermission: false,
 	autoApproveReadPermission: true,
-	debug: false,
-	obsidianFocussedPrompt: false
+	obsidianFocussedPrompt: false,
+	enableGitIntegration: false
 };

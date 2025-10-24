@@ -25,15 +25,13 @@ export class ACPClient {
 	}> = new Map();
 	private updateCallback: ((update: SessionUpdate) => void) | null = null;
 	private modeState: SessionModeState | null = null;
+	private agentCapabilities: any = null;
 
 	constructor(app: App, settings: ACPClientSettings, plugin: ACPClientPlugin) {
 		this.app = app;
 		this.settings = settings;
 		this.plugin = plugin;
 		this.basePath = this.getVaultPath();
-		if (this.settings.debug) {
-			console.log('Creating session with cwd:', this.basePath);
-		}
 	}
 
 	setUpdateCallback(callback: (update: SessionUpdate) => void) {
@@ -59,9 +57,6 @@ export class ACPClient {
 		});
 
 		this.process.on('exit', (code) => {
-			if (this.settings.debug) {
-				console.log(`Agent process exited with code ${code}`);
-			}
 			// Note: This handler is removed during intentional cleanup to prevent race conditions
 			// It only fires when the process exits unexpectedly
 			this.cleanup().catch((err) => {
@@ -131,9 +126,8 @@ export class ACPClient {
 			}
 		});
 
-		if (this.settings.debug) {
-			console.log('Agent initialized:', initResponse);
-		}
+		// Store agent capabilities
+		this.agentCapabilities = initResponse.agentCapabilities;
 	}
 
 	async createSession(): Promise<void> {
@@ -163,10 +157,6 @@ export class ACPClient {
 				availableModes: response.modes.availableModes
 			};
 
-			if (this.settings.debug) {
-				console.log('Session modes:', this.modeState);
-			}
-
 			// Notify UI of available modes
 			if (this.updateCallback) {
 				this.updateCallback({
@@ -176,9 +166,54 @@ export class ACPClient {
 			}
 		}
 
-		if (this.settings.debug) {
-			console.log('Session created:', this.sessionId, response);
+	}
+
+	async loadSession(sessionId: string): Promise<void> {
+		if (!this.connection) {
+			throw new Error('Not connected to agent');
 		}
+
+		// Check if agent supports loadSession
+		if (!this.agentCapabilities?.loadSession) {
+			throw new Error('Agent does not support loading sessions. This feature requires an agent with loadSession capability.');
+		}
+
+		try {
+			const response = await this.connection.loadSession({
+				sessionId: sessionId,
+				cwd: this.basePath,
+				mcpServers: []
+			});
+
+			this.sessionId = sessionId;
+
+			// Store mode state if provided
+			if (response.modes) {
+				this.modeState = {
+					currentModeId: response.modes.currentModeId,
+					availableModes: response.modes.availableModes
+				};
+
+				// Notify UI of available modes
+				if (this.updateCallback) {
+					this.updateCallback({
+						type: 'mode_change',
+						data: this.modeState
+					});
+				}
+			}
+
+		} catch (err) {
+			throw new Error(`Failed to load session: ${err.message || 'Session not found. The session ID may not exist or may have expired.'}`);
+		}
+	}
+
+	supportsLoadSession(): boolean {
+		return this.agentCapabilities?.loadSession === true;
+	}
+
+	getSessionId(): string | null {
+		return this.sessionId;
 	}
 
 	private getVaultPath(): string {
@@ -208,10 +243,6 @@ export class ACPClient {
 				type: 'turn_complete',
 				data: response
 			});
-		}
-
-		if (this.settings.debug) {
-			console.log('Agent turn completed with response:', response);
 		}
 	}
 
@@ -244,10 +275,6 @@ export class ACPClient {
 			throw new Error(`Invalid mode ID: ${modeId}`);
 		}
 
-		if (this.settings.debug) {
-			console.log('Setting session mode to:', modeId);
-		}
-
 		await this.connection.setSessionMode({
 			sessionId: this.sessionId,
 			modeId: modeId
@@ -255,10 +282,6 @@ export class ACPClient {
 
 		// Update local state
 		this.modeState.currentModeId = modeId;
-
-		if (this.settings.debug) {
-			console.log('Mode changed to:', modeId);
-		}
 	}
 
 	// Client method implementations
@@ -279,10 +302,6 @@ export class ACPClient {
 
 			if (params.path.startsWith(basePath)) {
 				relativePath = params.path.substring(basePath.length + 1);
-			}
-
-			if (this.settings.debug) {
-				console.log('Reading file:', { original: params.path, relative: relativePath, basePath });
 			}
 
 			const file = this.app.vault.getFileByPath(relativePath);
@@ -306,10 +325,6 @@ export class ACPClient {
 
 			if (params.path.startsWith(basePath)) {
 				relativePath = params.path.substring(basePath.length + 1);
-			}
-
-			if (this.settings.debug) {
-				console.log('Writing file:', { original: params.path, relative: relativePath, basePath });
 			}
 
 			// Read current file content to show diff
@@ -362,10 +377,6 @@ export class ACPClient {
 	}
 
 	private async handleRequestPermission(params: schema.RequestPermissionRequest): Promise<schema.RequestPermissionResponse> {
-		if (this.settings.debug) {
-			console.log('Permission requested:', params);
-		}
-
 		// Send permission request to UI for inline approval
 		if (this.updateCallback && params.options && params.options.length > 0) {
 			return new Promise((resolve) => {
@@ -391,10 +402,6 @@ export class ACPClient {
 
 		const basePath = this.getVaultPath();
 		const workingDir = params.cwd || basePath;
-
-		if (this.settings.debug) {
-			console.log('Creating terminal:', { command: params.command, args: params.args, cwd: workingDir });
-		}
 
 		// If no args provided, this might be a shell command - use shell: true
 		const useShell = !params.args || params.args.length === 0;
@@ -458,14 +465,6 @@ export class ACPClient {
 			response.exitStatus = {
 				exitCode: terminal.process.exitCode
 			};
-		}
-
-		if (this.settings.debug) {
-			console.log(`Terminal ${params.terminalId} output:`, {
-				length: combinedOutput.length,
-				exitCode: terminal.process.exitCode,
-				preview: combinedOutput.substring(0, 100)
-			});
 		}
 
 		return response;

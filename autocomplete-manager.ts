@@ -69,7 +69,7 @@ export class AutocompleteManager {
 
 	handleKeyDown(e: KeyboardEvent): boolean {
 		// Return true if event was handled and should be prevented
-		if (this.autocompleteContainer.style.display !== 'none') {
+		if (!this.autocompleteContainer.hasClass('acp-hidden')) {
 			if (e.key === 'ArrowDown') {
 				this.moveSelection(1);
 				return true;
@@ -167,10 +167,10 @@ export class AutocompleteManager {
 			});
 
 			// Store item data on element for keyboard navigation
-			(itemEl as any)._acpItem = item;
+			itemEl.dataset.acpItem = JSON.stringify(item);
 		});
 
-		this.autocompleteContainer.style.display = 'block';
+		this.autocompleteContainer.removeClass('acp-hidden');
 		// Reset scroll position to top when showing new autocomplete
 		this.autocompleteContainer.scrollTop = 0;
 
@@ -193,7 +193,7 @@ export class AutocompleteManager {
 
 	hide(): void {
 		if (this.autocompleteContainer) {
-			this.autocompleteContainer.style.display = 'none';
+			this.autocompleteContainer.addClass('acp-hidden');
 			this.autocompleteSelectedIndex = -1;
 		}
 	}
@@ -274,8 +274,9 @@ export class AutocompleteManager {
 		const items = this.autocompleteContainer.querySelectorAll('.acp-autocomplete-item');
 		const selectedItem = items[this.autocompleteSelectedIndex] as HTMLElement;
 
-		if (selectedItem && (selectedItem as any)._acpItem) {
-			this.selectItem((selectedItem as any)._acpItem);
+		if (selectedItem && selectedItem.dataset.acpItem) {
+			const item = JSON.parse(selectedItem.dataset.acpItem) as AutocompleteItem;
+			this.selectItem(item);
 		}
 	}
 }

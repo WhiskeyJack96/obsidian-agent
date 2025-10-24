@@ -6,15 +6,12 @@ export class ModeManager {
 	private modeSelector: HTMLSelectElement;
 	private client: ACPClient | null = null;
 	private onModeChangeMessage: (modeName: string) => void;
-	private debug: boolean;
 
 	constructor(
 		container: HTMLElement,
-		onModeChangeMessage: (modeName: string) => void,
-		debug: boolean = false
+		onModeChangeMessage: (modeName: string) => void
 	) {
 		this.onModeChangeMessage = onModeChangeMessage;
-		this.debug = debug;
 
 		// Create mode selector dropdown
 		this.modeSelector = container.createEl('select', {
@@ -49,10 +46,6 @@ export class ModeManager {
 
 		this.modeSelector.value = modeState.currentModeId;
 		this.modeSelector.disabled = false;
-
-		if (this.debug) {
-			console.log('Mode selector updated:', modeState);
-		}
 	}
 
 	updateCurrentMode(modeId: string): void {
@@ -69,10 +62,6 @@ export class ModeManager {
 					this.onModeChangeMessage(mode.name);
 				}
 			}
-		}
-
-		if (this.debug) {
-			console.log('Current mode updated to:', modeId);
 		}
 	}
 

@@ -6,13 +6,18 @@ import { DiffView, VIEW_TYPE_DIFF, DiffData } from './diff-view';
 import { ACPClientSettingTab } from './settings-tab';
 import { ACPClientSettings, DEFAULT_SETTINGS } from './settings';
 import { Plan } from './types';
+import { GitIntegration } from './git-integration';
 
 export default class ACPClientPlugin extends Plugin {
 	settings: ACPClientSettings;
 	private client: ACPClient | null = null;
+	private gitIntegration: GitIntegration | null = null;
 
 	async onload() {
 		await this.loadSettings();
+
+		// Initialize git integration
+		this.gitIntegration = new GitIntegration(this.app);
 
 		// Register the agent view
 		this.registerView(
@@ -84,13 +89,6 @@ export default class ACPClientPlugin extends Plugin {
 		if (this.client) {
 			await this.client.cleanup();
 		}
-
-		// Detach all agent views
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_AGENT);
-		// Detach all plan views
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_PLAN);
-		// Detach all diff views
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_DIFF);
 	}
 
 	initializeExistingViews() {
@@ -109,6 +107,12 @@ export default class ACPClientPlugin extends Plugin {
 			this.client = new ACPClient(this.app, this.settings, this);
 		}
 		view.setClient(this.client);
+
+		// Set git integration and client for git operations
+		if (this.gitIntegration) {
+			this.gitIntegration.setClient(this.client);
+			view.setGitIntegration(this.gitIntegration);
+		}
 	}
 
 	async activateView() {

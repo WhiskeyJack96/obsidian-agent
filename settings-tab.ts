@@ -62,12 +62,12 @@ export class ACPClientSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Debug Mode')
-			.setDesc('Enable debug logging to console (errors are always logged)')
+			.setName('Enable Git Integration')
+			.setDesc('Automatically prompt to commit changes after agent turns complete')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.debug)
+				.setValue(this.plugin.settings.enableGitIntegration)
 				.onChange(async (value) => {
-					this.plugin.settings.debug = value;
+					this.plugin.settings.enableGitIntegration = value;
 					await this.plugin.saveSettings();
 				}));
 

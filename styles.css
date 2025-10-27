@@ -418,6 +418,85 @@
 	font-size: 0.85em;
 }
 
+/* Agent Thought Messages - Enhanced UI */
+.acp-message-agent-thought {
+	background: linear-gradient(135deg, var(--background-secondary-alt) 0%, var(--background-secondary) 100%);
+	margin-right: 20%;
+	border: 1px dashed var(--background-modifier-border);
+	border-left: 3px solid var(--text-faint);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+	opacity: 0.85;
+	color: var(--text-muted);
+	font-style: italic;
+	padding: 8px 10px;
+	transition: all 0.2s ease;
+}
+
+.acp-message-agent-thought:hover {
+	opacity: 1;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Thought Header */
+.acp-thought-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 0;
+	margin-bottom: 8px;
+}
+
+.acp-thought-header-clickable {
+	cursor: pointer;
+	user-select: none;
+	transition: color 0.2s;
+}
+
+.acp-thought-header-clickable:hover {
+	color: var(--text-normal);
+}
+
+.acp-thought-icon {
+	font-size: 1.2em;
+	line-height: 1;
+}
+
+.acp-thought-label {
+	font-weight: 600;
+	font-size: 0.85em;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: var(--text-muted);
+	font-style: normal;
+}
+
+.acp-thought-toggle {
+	margin-left: auto;
+	font-size: 0.9em;
+	color: var(--text-faint);
+	transition: transform 0.2s;
+}
+
+/* Thought Content */
+.acp-thought-content {
+	font-size: 0.9em;
+	line-height: 1.5;
+	color: var(--text-muted);
+	transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+	overflow: hidden;
+}
+
+.acp-thought-content:not(.acp-collapsed) {
+	margin-top: 4px;
+	opacity: 1;
+}
+
+.acp-thought-content.acp-collapsed {
+	max-height: 0;
+	opacity: 0;
+	margin-top: 0;
+}
+
 .acp-debug-json {
 	max-height: 200px;
 	overflow-y: auto;

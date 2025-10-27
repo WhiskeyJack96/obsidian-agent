@@ -417,6 +417,10 @@ export class AgentView extends ItemView {
 				this.appendToLastAgentMessage(updateData.content);
 				return
 			}
+			else if (updateType === 'agent_thought_chunk' && updateData.content) {
+				this.appendToLastAgentThought(updateData.content);
+				return
+			}
 			else if (updateType === 'available_commands_update' && updateData.availableCommands) {
 				this.showAvailableCommands(updateData.availableCommands);
 				return
@@ -447,7 +451,14 @@ export class AgentView extends ItemView {
 
 
 	private async appendToLastAgentMessage(content: ContentBlock): Promise<void> {
+		// End thought message when transitioning to agent message
+		this.messageRenderer.endCurrentThoughtMessage();
 		await this.messageRenderer.appendToCurrentAgentMessage(content);
+	}
+
+	private async appendToLastAgentThought(content: ContentBlock): Promise<void> {
+		// Append to current thought message (creates one if needed)
+		await this.messageRenderer.appendToCurrentThoughtMessage(content);
 	}
 
 
@@ -474,12 +485,14 @@ export class AgentView extends ItemView {
 
 	private async handleToolCallUpdate(updateData: ToolCallUpdate): Promise<void> {
 		this.messageRenderer.endCurrentAgentMessage();
+		this.messageRenderer.endCurrentThoughtMessage();
 		await this.messageRenderer.updateOrCreateToolCallMessage(updateData);
 	}
 
 
 	private showPermissionRequest(params: RequestPermissionRequest, resolve: (response: RequestPermissionResponse) => void): void {
 		this.messageRenderer.endCurrentAgentMessage();
+		this.messageRenderer.endCurrentThoughtMessage();
 
 		const permissionId = `permission-${Date.now()}`;
 		const message = new PermissionRequestMessage(permissionId, params, resolve, this.component);
@@ -496,6 +509,7 @@ export class AgentView extends ItemView {
 		// Reset current agent message tracker when adding a new non-agent message
 		if (sender === 'user' || sender === 'system') {
 			this.messageRenderer.endCurrentAgentMessage();
+			this.messageRenderer.endCurrentThoughtMessage();
 		}
 
 		const messageId = `${sender}-${Date.now()}-${Math.random()}`;

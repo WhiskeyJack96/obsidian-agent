@@ -1,6 +1,7 @@
 import { Component } from 'obsidian';
 import { Message } from './base-message';
 import { TextMessage } from './text-message';
+import { ThoughtMessage } from './thought-message';
 import { ToolCallMessage } from './tool-call-message';
 import { CommandsMessage } from './commands-message';
 import { ToolCallUpdate, ContentBlock, AvailableCommand } from '../types';
@@ -15,6 +16,7 @@ export class MessageRenderer {
 	private component: Component;
 	private pendingMessageId: string | null = null;
 	private currentAgentMessageId: string | null = null;
+	private currentThoughtMessageId: string | null = null;
 	private commandsMessageId: string | null = null;
 	private toolCallCache: Map<string, ToolCallUpdate> = new Map();
 
@@ -90,6 +92,7 @@ export class MessageRenderer {
 		this.messages.clear();
 		this.pendingMessageId = null;
 		this.currentAgentMessageId = null;
+		this.currentThoughtMessageId = null;
 		this.commandsMessageId = null;
 		this.toolCallCache.clear();
 		this.container.empty();
@@ -201,6 +204,53 @@ export class MessageRenderer {
 	 */
 	endCurrentAgentMessage(): void {
 		this.currentAgentMessageId = null;
+	}
+
+	/**
+	 * Append content to the current thought message (creating one if needed).
+	 */
+	async appendToCurrentThoughtMessage(content: ContentBlock): Promise<void> {
+		if (content.type === 'text' && content.text) {
+			// Create new thought message if we don't have one
+			if (!this.currentThoughtMessageId) {
+				this.currentThoughtMessageId = `thought-${Date.now()}`;
+				const message = new ThoughtMessage(this.currentThoughtMessageId, '', this.component);
+				await this.addMessage(message);
+			}
+
+			// Get current message and accumulate text
+			const currentMessage = this.messages.get(this.currentThoughtMessageId);
+			if (currentMessage && currentMessage instanceof ThoughtMessage) {
+				const currentText = currentMessage.getContent();
+
+				// Smart spacing: add paragraph breaks between chunks when appropriate
+				let textToAdd = content.text;
+				if (currentText.length > 0) {
+					const lastChar = currentText.trim().slice(-1);
+					const firstChar = content.text.trim()[0];
+
+					// If previous text ends with sentence-ending punctuation and new text starts with uppercase,
+					// it's likely a new thought - add double newline for paragraph break
+					if (/[.!?:]/.test(lastChar) && firstChar && /[A-Z]/.test(firstChar)) {
+						// Only add spacing if there isn't already whitespace at the boundary
+						if (!/\s$/.test(currentText) && !/^\s/.test(content.text)) {
+							textToAdd = '\n\n' + content.text;
+						}
+					}
+				}
+
+				// Update message with accumulated text
+				const newText = currentText + textToAdd;
+				await currentMessage.update(newText);
+			}
+		}
+	}
+
+	/**
+	 * End the current thought message (clears the tracker).
+	 */
+	endCurrentThoughtMessage(): void {
+		this.currentThoughtMessageId = null;
 	}
 
 	/**

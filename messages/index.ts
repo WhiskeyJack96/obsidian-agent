@@ -1,5 +1,6 @@
 export { Message } from './base-message';
 export { TextMessage } from './text-message';
+export { ThoughtMessage } from './thought-message';
 export { ToolCallMessage } from './tool-call-message';
 export { PermissionRequestMessage } from './permission-request-message';
 export { CommandsMessage } from './commands-message';

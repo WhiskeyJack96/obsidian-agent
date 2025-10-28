@@ -1052,10 +1052,6 @@
 	display: inline !important;
 }
 
-/* Full-width Input */
-.acp-input-full-width {
-	width: 100%;
-}
 
 /* Autocomplete Container */
 .acp-autocomplete-visible {
@@ -1064,27 +1060,4 @@
 
 .acp-autocomplete-hidden {
 	display: none;
-}
-
-/* Commit Review Modal */
-.acp-commit-review-modal {
-	padding: 20px;
-}
-
-.acp-commit-review-modal h2 {
-	margin-top: 0;
-	margin-bottom: 12px;
-	color: var(--text-normal);
-}
-
-.acp-commit-review-modal p {
-	margin-bottom: 16px;
-	color: var(--text-muted);
-}
-
-.acp-commit-buttons {
-	display: flex;
-	gap: 8px;
-	margin-top: 16px;
-	justify-content: flex-end;
 }

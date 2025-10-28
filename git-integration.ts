@@ -1,47 +1,45 @@
-import { App, Notice, FileSystemAdapter } from 'obsidian';
-import { ACPClient } from './acp-client';
-import { CommitReviewModal, CommitReviewResult } from './commit-review-modal';
-import { existsSync } from 'fs';
-import { join } from 'path';
+import { App, Notice } from 'obsidian';
+
+interface FileStatus {
+	path: string;
+	vaultPath: string;
+	index: string;
+	workingDir: string;
+}
+
+interface StatusResult {
+	all: FileStatus[];
+	changed: FileStatus[];
+	staged: FileStatus[];
+	conflicted: string[];
+}
 
 interface ObsidianGitPlugin {
 	gitManager: {
 		commit(params: { message: string }): Promise<void>;
+		status(): Promise<StatusResult>;
+	};
+}
+
+interface ObsidianPluginsRegistry {
+	plugins: {
+		[key: string]: any;
 	};
 }
 
 export class GitIntegration {
 	private app: App;
-	private client: ACPClient | null = null;
 
 	constructor(app: App) {
 		this.app = app;
-	}
-
-	setClient(client: ACPClient): void {
-		this.client = client;
-	}
-
-	/**
-	 * Check if the vault is a git repository by looking for .git directory
-	 */
-	private isGitRepository(): boolean {
-		const adapter = this.app.vault.adapter;
-		if (!(adapter instanceof FileSystemAdapter)) {
-			return false;
-		}
-
-		const basePath = adapter.getBasePath();
-		const gitPath = join(basePath, '.git');
-		return existsSync(gitPath);
 	}
 
 	/**
 	 * Check if the obsidian-git plugin is installed and enabled
 	 */
 	private getObsidianGitPlugin(): ObsidianGitPlugin | null {
-		// @ts-ignore - accessing internal plugin registry
-		const plugins = this.app.plugins.plugins;
+		const app = this.app as any;
+		const plugins = app.plugins?.plugins;
 		if (plugins && plugins['obsidian-git']) {
 			return plugins['obsidian-git'] as ObsidianGitPlugin;
 		}
@@ -49,80 +47,34 @@ export class GitIntegration {
 	}
 
 	/**
-	 * Prompt user to review and commit changes after an agent turn
+	 * Automatically commit changes if obsidian-git plugin is available and there are changes
 	 */
-	async promptCommit(): Promise<void> {
-		// Check if this is a git repository
-		if (!this.isGitRepository()) {
-			new Notice('Not a git repository. Initialize git first (.git directory not found).');
-			return;
-		}
-
-		// Check which method to use for committing
+	async autoCommitIfNeeded(): Promise<void> {
+		// Check if obsidian-git plugin is available
 		const obsidianGit = this.getObsidianGitPlugin();
-
-		if (obsidianGit) {
-			await this.commitWithObsidianGit(obsidianGit);
-		} else {
-			await this.commitWithAgent();
-		}
-	}
-
-	/**
-	 * Commit using the obsidian-git plugin
-	 */
-	private async commitWithObsidianGit(plugin: ObsidianGitPlugin): Promise<void> {
-		// Show modal and get commit message from user
-		const result = await this.showCommitReviewModal();
-
-		if (!result.approved || !result.message) {
-			new Notice('Commit cancelled');
+		if (!obsidianGit) {
+			// Skip silently if obsidian-git is not available
 			return;
 		}
 
 		try {
-			await plugin.gitManager.commit({ message: result.message });
-			new Notice('Changes committed successfully via obsidian-git');
+			// Check git status using obsidian-git's gitManager
+			const status = await obsidianGit.gitManager.status();
+
+			// Check if there are uncommitted changes
+			if (status.changed.length === 0) {
+				return;
+			}
+
+			// Auto-commit with default message
+			const timestamp = new Date().toISOString();
+			const commitMessage = `chore: auto-commit after agent turn at ${timestamp}`;
+
+			await obsidianGit.gitManager.commit({ message: commitMessage });
+			new Notice('Changes committed successfully');
 		} catch (err) {
 			new Notice(`Failed to commit: ${err.message}`);
 			console.error('Git commit error:', err);
 		}
-	}
-
-	/**
-	 * Commit using the agent in a separate session
-	 */
-	private async commitWithAgent(): Promise<void> {
-		if (!this.client) {
-			new Notice('Agent client not available for git commit');
-			return;
-		}
-
-		// Show modal and get commit message from user
-		const result = await this.showCommitReviewModal();
-
-		if (!result.approved || !result.message) {
-			new Notice('Commit cancelled');
-			return;
-		}
-
-		try {
-			// Send a prompt to the agent to commit changes
-			await this.client.sendPrompt(`Please commit all changes with the message: "${result.message}"`);
-			new Notice('Commit request sent to agent');
-		} catch (err) {
-			new Notice(`Failed to send commit request: ${err.message}`);
-			console.error('Agent commit error:', err);
-		}
-	}
-
-	/**
-	 * Show the commit review modal and wait for user input
-	 */
-	private async showCommitReviewModal(): Promise<CommitReviewResult> {
-		return new Promise((resolve) => {
-			const modal = new CommitReviewModal(this.app, resolve);
-			modal.open();
-		});
 	}
 }

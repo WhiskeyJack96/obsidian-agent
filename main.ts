@@ -108,9 +108,8 @@ export default class ACPClientPlugin extends Plugin {
 		}
 		view.setClient(this.client);
 
-		// Set git integration and client for git operations
+		// Set git integration for auto-commit after agent turns
 		if (this.gitIntegration) {
-			this.gitIntegration.setClient(this.client);
 			view.setGitIntegration(this.gitIntegration);
 		}
 	}

@@ -63,7 +63,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Enable Git Integration')
-			.setDesc('Automatically prompt to commit changes after agent turns complete')
+			.setDesc('Automatically commit changes after agent turns complete (requires obsidian-git plugin)')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableGitIntegration)
 				.onChange(async (value) => {

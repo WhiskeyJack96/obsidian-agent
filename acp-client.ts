@@ -1,5 +1,5 @@
 import { spawn, ChildProcess } from 'child_process';
-import { ClientSideConnection, ndJsonStream, Client, Agent } from '@zed-industries/agent-client-protocol';
+import { ClientSideConnection, ndJsonStream, Client, Agent, AgentCapabilities } from '@zed-industries/agent-client-protocol';
 import { Readable as NodeReadable, Writable as NodeWritable } from 'stream';
 import { ReadableStream, WritableStream } from 'stream/web';
 import { App, Notice, FileSystemAdapter, TFile } from 'obsidian';
@@ -25,7 +25,7 @@ export class ACPClient {
 	}> = new Map();
 	private updateCallback: ((update: SessionUpdate) => void) | null = null;
 	private modeState: SessionModeState | null = null;
-	private agentCapabilities: any = null;
+	private agentCapabilities: AgentCapabilities | null = null;
 
 	constructor(app: App, settings: ACPClientSettings, plugin: ACPClientPlugin) {
 		this.app = app;
@@ -127,7 +127,7 @@ export class ACPClient {
 		});
 
 		// Store agent capabilities
-		this.agentCapabilities = initResponse.agentCapabilities;
+		this.agentCapabilities = initResponse.agentCapabilities || null;
 	}
 
 	async createSession(): Promise<void> {

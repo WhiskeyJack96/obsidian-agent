@@ -377,7 +377,7 @@ export class AgentView extends ItemView {
 
 			// Trigger git integration if enabled
 			if (this.plugin.settings.enableGitIntegration && this.gitIntegration) {
-				this.gitIntegration.promptCommit().catch((err) => {
+				this.gitIntegration.autoCommitIfNeeded().catch((err) => {
 					console.error('Git integration error:', err);
 				});
 			}

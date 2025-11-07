@@ -53,6 +53,28 @@ export class ToolCallMessage extends Message {
 			toolHeader.createEl('span', { cls: `acp-tool-status-badge acp-tool-status-${this.data.status}` });
 		}
 
+		// Show key arguments if available
+		if (this.data.rawInput) {
+			const rawInput = this.data.rawInput;
+			const keyArgs = ['commandId', 'path', 'description', 'command'];
+			const argsToShow: [string, string][] = [];
+
+			for (const key of keyArgs) {
+				if (key in rawInput && typeof rawInput[key] === 'string') {
+					argsToShow.push([key, rawInput[key] as string]);
+				}
+			}
+
+			if (argsToShow.length > 0) {
+				const argsEl = this.contentEl.createDiv({ cls: 'acp-tool-arguments' });
+				for (const [key, value] of argsToShow) {
+					const argRow = argsEl.createDiv({ cls: 'acp-tool-arg-row' });
+					argRow.createEl('span', { cls: 'acp-tool-arg-key', text: `${key}: ` });
+					argRow.createEl('span', { cls: 'acp-tool-arg-value', text: value });
+				}
+			}
+		}
+
 		// Show content/output if available (only when completed)
 		if (this.data.status === 'completed' && this.data.content && Array.isArray(this.data.content) && this.data.content.length > 0) {
 			for (const block of this.data.content) {

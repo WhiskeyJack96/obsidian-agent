@@ -87,5 +87,52 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		const alphaWarning = alphaSettingEl.descEl.createDiv();
 		alphaWarning.addClass('acp-alpha-warning');
 		alphaWarning.setText('⚠️ ALPHA: This feature is experimental and may change');
+
+		// MCP Server section
+		containerEl.createEl('h2', { text: 'MCP Server Settings' });
+
+		new Setting(containerEl)
+			.setName('Enable MCP Server')
+			.setDesc('Start an embedded MCP server that exposes Obsidian commands. The ACP agent can connect to this server to execute Obsidian commands.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableMCPServer)
+				.onChange(async (value) => {
+					this.plugin.settings.enableMCPServer = value;
+					await this.plugin.saveSettings();
+
+					// Start or stop the server based on the new value
+					if (value) {
+						await this.plugin.startMCPServer();
+					} else {
+						await this.plugin.stopMCPServer();
+					}
+				}));
+
+		new Setting(containerEl)
+			.setName('MCP Server Port')
+			.setDesc('Port number for the MCP server (requires restart if server is running)')
+			.addText(text => text
+				.setPlaceholder('3100')
+				.setValue(String(this.plugin.settings.mcpServerPort))
+				.onChange(async (value) => {
+					const port = parseInt(value);
+					if (!isNaN(port) && port > 0 && port < 65536) {
+						this.plugin.settings.mcpServerPort = port;
+						await this.plugin.saveSettings();
+
+						// Restart server if it's running
+						if (this.plugin.settings.enableMCPServer) {
+							await this.plugin.startMCPServer();
+						}
+					}
+				}));
+
+		// Add MCP server info
+		const mcpInfoEl = containerEl.createDiv();
+		mcpInfoEl.addClass('setting-item-description');
+		mcpInfoEl.setText(`MCP Server endpoint: http://localhost:${this.plugin.settings.mcpServerPort}/mcp`);
+		mcpInfoEl.style.marginTop = '10px';
+		mcpInfoEl.style.fontStyle = 'italic';
+		mcpInfoEl.style.color = 'var(--text-muted)';
 	}
 }

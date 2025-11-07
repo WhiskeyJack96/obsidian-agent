@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf } from 'obsidian';
+import { Plugin, WorkspaceLeaf, Notice } from 'obsidian';
 import { ACPClient } from './acp-client';
 import { AgentView, VIEW_TYPE_AGENT } from './agent-view';
 import { PlanView, VIEW_TYPE_PLAN } from './plan-view';
@@ -7,11 +7,13 @@ import { ACPClientSettingTab } from './settings-tab';
 import { ACPClientSettings, DEFAULT_SETTINGS } from './settings';
 import { Plan } from './types';
 import { GitIntegration } from './git-integration';
+import { ObsidianMCPServer } from './mcp-server';
 
 export default class ACPClientPlugin extends Plugin {
 	settings: ACPClientSettings;
 	private client: ACPClient | null = null;
 	private gitIntegration: GitIntegration | null = null;
+	private mcpServer: ObsidianMCPServer | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -82,12 +84,22 @@ export default class ACPClientPlugin extends Plugin {
 
 		// Add settings tab
 		this.addSettingTab(new ACPClientSettingTab(this.app, this));
+
+		// Start MCP server if enabled
+		if (this.settings.enableMCPServer) {
+			this.startMCPServer();
+		}
 	}
 
 	async onunload() {
 		// Clean up client
 		if (this.client) {
 			await this.client.cleanup();
+		}
+
+		// Stop MCP server
+		if (this.mcpServer) {
+			await this.stopMCPServer();
 		}
 	}
 
@@ -190,5 +202,33 @@ export default class ACPClientPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	async startMCPServer() {
+		try {
+			if (this.mcpServer) {
+				await this.stopMCPServer();
+			}
+
+			this.mcpServer = new ObsidianMCPServer({
+				app: this.app,
+				port: this.settings.mcpServerPort
+			});
+
+			await this.mcpServer.start();
+			new Notice(`MCP Server started on port ${this.settings.mcpServerPort}`);
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+			new Notice(`Failed to start MCP Server: ${errorMessage}`);
+			console.error('Failed to start MCP Server:', error);
+		}
+	}
+
+	async stopMCPServer() {
+		if (this.mcpServer) {
+			await this.mcpServer.stop();
+			this.mcpServer = null;
+			new Notice('MCP Server stopped');
+		}
 	}
 }

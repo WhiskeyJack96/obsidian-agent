@@ -33,16 +33,34 @@ export class PermissionRequestMessage extends Message {
 			titleEl.setText(this.params.toolCall.title);
 		}
 
-		// Show compact input info
+		// Show compact input info with key arguments
 		if (this.params.toolCall && this.params.toolCall.rawInput) {
-			const inputEl = contentEl.createDiv({ cls: 'acp-permission-input-compact' });
 			const rawInput = this.params.toolCall.rawInput;
+
+			// Show command if present (for terminal operations)
 			const cmd = typeof rawInput.command === 'string' ? rawInput.command : undefined;
-			const desc = typeof rawInput.description === 'string' ? rawInput.description : undefined;
 			if (cmd) {
+				const inputEl = contentEl.createDiv({ cls: 'acp-permission-input-compact' });
 				inputEl.createEl('code', { text: cmd });
-			} else if (desc) {
-				inputEl.setText(desc);
+			}
+
+			// Show other key arguments (commandId, path, etc.) - one per line
+			const keyArgs = ['commandId', 'path', 'description'];
+			const argsToShow: [string, string][] = [];
+
+			for (const key of keyArgs) {
+				if (key in rawInput && typeof rawInput[key] === 'string') {
+					argsToShow.push([key, rawInput[key] as string]);
+				}
+			}
+
+			if (argsToShow.length > 0) {
+				const argsEl = contentEl.createDiv({ cls: 'acp-permission-arguments' });
+				for (const [key, value] of argsToShow) {
+					const argRow = argsEl.createDiv({ cls: 'acp-permission-arg-row' });
+					argRow.createEl('span', { cls: 'acp-permission-arg-key', text: `${key}: ` });
+					argRow.createEl('span', { cls: 'acp-permission-arg-value', text: value });
+				}
 			}
 		}
 

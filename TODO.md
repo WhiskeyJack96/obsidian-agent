@@ -20,3 +20,4 @@ Ideas:
 
 Commits should only be done after agent turns complete and the user should be given the ability to review/agree to the commit.
 - tool permissions also render Notices
+

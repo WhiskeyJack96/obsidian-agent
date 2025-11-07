@@ -140,12 +140,23 @@ export class ACPClient {
 			systemPrompt = readFileSync("prompt.md")
 		}
 
+		// Configure MCP servers
+		const mcpServers = [];
+		if (this.settings.enableMCPServer) {
+			mcpServers.push({
+				type: "http" as const,
+				name: "obsidian-commands",
+				url: `http://localhost:${this.settings.mcpServerPort}/mcp`,
+				headers: []
+			});
+		}
+
 		const response = await this.connection.newSession({
 			cwd: this.basePath,
 			_meta: {
 				systemPrompt
 			},
-			mcpServers: []
+			mcpServers
 		});
 
 		this.sessionId = response.sessionId;

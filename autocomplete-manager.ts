@@ -1,12 +1,13 @@
 import { App } from 'obsidian';
 
 interface AutocompleteItem {
-	type: 'command' | 'file';
+	type: 'command' | 'file' | 'open_note';
 	name: string;
 	description?: string;
 	path?: string;
 	insertText: string;
 	triggerPos: number;
+	isExpanding?: boolean;
 }
 
 export class AutocompleteManager {
@@ -26,6 +27,25 @@ export class AutocompleteManager {
 		this.availableCommands = commands;
 	}
 
+	private getOpenFiles(): Array<{file: any; isActive: boolean}> {
+		const activeFile = this.app.workspace.getActiveFile();
+		const openFiles: Array<{file: any; isActive: boolean}> = [];
+
+		// Get all markdown views
+		const leaves = this.app.workspace.getLeavesOfType('markdown');
+		for (const leaf of leaves) {
+			const file = (leaf.view as any)?.file;
+			if (file) {
+				openFiles.push({
+					file,
+					isActive: file === activeFile
+				});
+			}
+		}
+
+		return openFiles;
+	}
+
 	handleInput(): void {
 		const cursorPos = this.inputField.selectionStart;
 		const textBeforeCursor = this.inputField.value.substring(0, cursorPos);
@@ -34,7 +54,7 @@ export class AutocompleteManager {
 		const slashMatch = textBeforeCursor.lastIndexOf('/');
 		const atMatch = textBeforeCursor.lastIndexOf('@');
 
-		let triggerType: 'command' | 'file' | null = null;
+		let triggerType: 'command' | 'file' | 'open_note' | null = null;
 		let triggerPos = -1;
 		let query = '';
 
@@ -49,18 +69,38 @@ export class AutocompleteManager {
 		} else if (atMatch !== -1 && atMatch > slashMatch) {
 			// Check if this is the start of the line or preceded by whitespace
 			if (atMatch === 0 || /\s/.test(textBeforeCursor[atMatch - 1])) {
-				triggerType = 'file';
-				triggerPos = atMatch;
-				query = textBeforeCursor.substring(atMatch + 1);
+				const afterAt = textBeforeCursor.substring(atMatch + 1);
+
+				// Check if this is @current_note trigger
+				if (afterAt.startsWith('current_note')) {
+					triggerType = 'open_note';
+					triggerPos = atMatch;
+					// Extract query after 'current_note ' or empty if just 'current_note'
+					if (afterAt.length > 12 && afterAt[12] === ' ') {
+						query = afterAt.substring(13);
+					} else if (afterAt.length === 12) {
+						query = '';
+					} else {
+						// Still typing 'current_note', don't show autocomplete yet
+						this.hide();
+						return;
+					}
+				} else {
+					triggerType = 'file';
+					triggerPos = atMatch;
+					query = afterAt;
+				}
 			}
 		}
 
-		// If we found a trigger and the query doesn't contain whitespace, show autocomplete
-		if (triggerType && triggerPos !== -1 && !/\s/.test(query)) {
+		// If we found a trigger and the query doesn't contain whitespace (or is open_note which allows empty), show autocomplete
+		if (triggerType && triggerPos !== -1 && (triggerType === 'open_note' || !/\s/.test(query))) {
 			if (triggerType === 'command') {
 				this.showCommandAutocomplete(query, triggerPos);
 			} else if (triggerType === 'file') {
 				this.showFileAutocomplete(query, triggerPos);
+			} else if (triggerType === 'open_note') {
+				this.showCurrentNoteAutocomplete(query, triggerPos);
 			}
 		} else {
 			this.hide();
@@ -117,16 +157,59 @@ export class AutocompleteManager {
 			)
 			.slice(0, 50); // Limit to 50 results
 
+		// Always include the "current_note" expanding item if it matches the query
+		const items: AutocompleteItem[] = [];
+		const currentNoteQuery = 'current_note';
+
+		// Only show current_note item if the query matches it
+		if (currentNoteQuery.includes(query.toLowerCase())) {
+			items.push({
+				type: 'file',
+				name: '● current_note (open files only)',
+				description: 'Show only open/active notes',
+				insertText: 'current_note ',
+				triggerPos: triggerPos,
+				isExpanding: true
+			});
+		}
+
+		// Add filtered files
+		items.push(...filtered.map(file => ({
+			type: 'file' as const,
+			name: file.basename,
+			path: file.path,
+			insertText: file.path,
+			triggerPos: triggerPos
+		})));
+
+		if (items.length === 0) {
+			this.hide();
+			return;
+		}
+
+		this.render(items);
+	}
+
+	private showCurrentNoteAutocomplete(query: string, triggerPos: number): void {
+		const openFiles = this.getOpenFiles();
+
+		const filtered = openFiles
+			.filter(f =>
+				f.file.path.toLowerCase().includes(query.toLowerCase()) ||
+				f.file.basename.toLowerCase().includes(query.toLowerCase())
+			)
+			.slice(0, 50); // Limit to 50 results
+
 		if (filtered.length === 0) {
 			this.hide();
 			return;
 		}
 
-		this.render(filtered.map(file => ({
-			type: 'file',
-			name: file.basename,
-			path: file.path,
-			insertText: file.path,
+		this.render(filtered.map(f => ({
+			type: 'open_note',
+			name: f.isActive ? `${f.file.basename} *` : f.file.basename,
+			path: f.file.path,
+			insertText: f.file.path,
 			triggerPos: triggerPos
 		})));
 	}
@@ -142,6 +225,11 @@ export class AutocompleteManager {
 
 			if (index === 0) {
 				itemEl.addClass('selected');
+			}
+
+			// Add special class for expanding items
+			if (item.isExpanding) {
+				itemEl.addClass('acp-autocomplete-item-expanding');
 			}
 
 			const nameEl = itemEl.createDiv({ cls: 'acp-autocomplete-item-name' });
@@ -199,6 +287,35 @@ export class AutocompleteManager {
 	}
 
 	private selectItem(item: AutocompleteItem): void {
+		// If this is an expanding item, insert text and re-trigger autocomplete
+		if (item.isExpanding) {
+			const cursorPos = this.inputField.selectionStart;
+			const value = this.inputField.value;
+
+			// Find the end of the current query
+			let queryEnd = cursorPos;
+			while (queryEnd < value.length && !/\s/.test(value[queryEnd])) {
+				queryEnd++;
+			}
+
+			// Replace from trigger position to end of query
+			const before = value.substring(0, item.triggerPos);
+			const after = value.substring(queryEnd);
+
+			// Insert the expanding item's text (e.g., "@current_note ")
+			this.inputField.value = before + '@' + item.insertText + after;
+
+			// Position cursor right after "@current_note "
+			const newCursorPos = before.length + 1 + item.insertText.length;
+			this.inputField.setSelectionRange(newCursorPos, newCursorPos);
+
+			// Re-trigger autocomplete to show the expanded list
+			this.handleInput();
+			this.inputField.focus();
+			return;
+		}
+
+		// Standard item selection
 		const cursorPos = this.inputField.selectionStart;
 		const value = this.inputField.value;
 
@@ -216,7 +333,7 @@ export class AutocompleteManager {
 		this.inputField.value = before + triggerChar + item.insertText + ' ' + after;
 
 		// Set cursor after the inserted text
-		const newCursorPos = before.length + 1 + item.insertText.length + 1;
+		const newCursorPos = before.length + triggerChar.length + item.insertText.length + 1;
 		this.inputField.setSelectionRange(newCursorPos, newCursorPos);
 
 		this.hide();

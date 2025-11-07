@@ -629,6 +629,31 @@
 	margin-top: 2px;
 }
 
+/* Expanding autocomplete items */
+.acp-autocomplete-item-expanding {
+	background-color: var(--background-modifier-hover);
+	font-weight: 600;
+	border-left: 3px solid var(--interactive-accent);
+}
+
+.acp-autocomplete-item-expanding:hover {
+	background-color: var(--interactive-accent);
+}
+
+.acp-autocomplete-item-expanding:hover .acp-autocomplete-item-name,
+.acp-autocomplete-item-expanding:hover .acp-autocomplete-item-description {
+	color: var(--text-on-accent);
+}
+
+.acp-autocomplete-item-expanding.selected {
+	background-color: var(--interactive-accent);
+}
+
+.acp-autocomplete-item-expanding.selected .acp-autocomplete-item-name,
+.acp-autocomplete-item-expanding.selected .acp-autocomplete-item-description {
+	color: var(--text-on-accent);
+}
+
 /* New Conversation Button */
 .acp-new-conversation-button {
 	padding: 6px 12px;

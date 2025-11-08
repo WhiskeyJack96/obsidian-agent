@@ -93,4 +93,9 @@ export class ThoughtMessage extends Message {
 	getContent(): string {
 		return this.content;
 	}
+
+	toMarkdown(): string {
+		const timestamp = this.timestamp.toLocaleTimeString();
+		return `## Agent Thought (${timestamp})\n\n${this.content}`;
+	}
 }

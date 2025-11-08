@@ -7,6 +7,8 @@ export interface ACPClientSettings {
 	enableGitIntegration: boolean;
 	enableMCPServer: boolean;
 	mcpServerPort: number;
+	enableConversationTracking: boolean;
+	conversationTrackingFolder: string;
 }
 
 export const DEFAULT_SETTINGS: ACPClientSettings = {
@@ -17,5 +19,7 @@ export const DEFAULT_SETTINGS: ACPClientSettings = {
 	obsidianFocussedPrompt: false,
 	enableGitIntegration: false,
 	enableMCPServer: false,
-	mcpServerPort: 3100
+	mcpServerPort: 3100,
+	enableConversationTracking: false,
+	conversationTrackingFolder: 'conversations/'
 };

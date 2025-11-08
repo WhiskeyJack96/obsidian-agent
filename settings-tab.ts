@@ -88,6 +88,30 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		alphaWarning.addClass('acp-alpha-warning');
 		alphaWarning.setText('⚠️ ALPHA: This feature is experimental and may change');
 
+		// Conversation Tracking section
+		containerEl.createEl('h2', { text: 'Conversation Tracking' });
+
+		new Setting(containerEl)
+			.setName('Enable Conversation Tracking')
+			.setDesc('Automatically save all conversation messages to markdown files')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableConversationTracking)
+				.onChange(async (value) => {
+					this.plugin.settings.enableConversationTracking = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Conversation Folder')
+			.setDesc('Folder path where conversation files will be saved (e.g., "conversations/")')
+			.addText(text => text
+				.setPlaceholder('conversations/')
+				.setValue(this.plugin.settings.conversationTrackingFolder)
+				.onChange(async (value) => {
+					this.plugin.settings.conversationTrackingFolder = value;
+					await this.plugin.saveSettings();
+				}));
+
 		// MCP Server section
 		containerEl.createEl('h2', { text: 'MCP Server Settings' });
 

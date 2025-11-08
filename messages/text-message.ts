@@ -51,4 +51,10 @@ export class TextMessage extends Message {
 	getContent(): string {
 		return this.content;
 	}
+
+	toMarkdown(): string {
+		const senderLabel = this.sender.charAt(0).toUpperCase() + this.sender.slice(1);
+		const timestamp = this.timestamp.toLocaleTimeString();
+		return `## ${senderLabel} (${timestamp})\n\n${this.content}`;
+	}
 }

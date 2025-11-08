@@ -32,6 +32,8 @@ enum ConnectionState {
 }
 
 export class AgentView extends ItemView {
+	private static viewCounter = 0;
+	private viewNumber: number;
 	private plugin: ACPClientPlugin;
 	private client: ACPClient | null = null;
 	private gitIntegration: GitIntegration | null = null;
@@ -51,6 +53,9 @@ export class AgentView extends ItemView {
 	constructor(leaf: WorkspaceLeaf, plugin: ACPClientPlugin) {
 		super(leaf);
 		this.plugin = plugin;
+		// Assign a unique number to this view
+		AgentView.viewCounter++;
+		this.viewNumber = AgentView.viewCounter;
 	}
 
 	getViewType(): string {
@@ -58,7 +63,7 @@ export class AgentView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return 'ACP Agent';
+		return `Agent ${this.viewNumber}`;
 	}
 
 	getIcon(): string {
@@ -139,6 +144,11 @@ export class AgentView extends ItemView {
 		// Initialize autocomplete manager
 		this.autocompleteManager = new AutocompleteManager(this.app, this.inputField, autocompleteContainer);
 
+		// Add close button to view header
+		this.addAction('cross', 'Close', () => {
+			this.leaf.detach();
+		});
+
 		this.inputField.addEventListener('keydown', (e) => {
 			// Handle autocomplete keyboard navigation
 			if (this.autocompleteManager && this.autocompleteManager.handleKeyDown(e)) {
@@ -160,9 +170,19 @@ export class AgentView extends ItemView {
 			}
 		});
 
-		// Ensure client is initialized when view opens (after all UI elements are created)
+		// Initialize client when view opens (after all UI elements are created)
+		this.initializeClient();
+
+		// Set git integration
+		if (this.plugin.gitIntegration) {
+			this.setGitIntegration(this.plugin.gitIntegration);
+		}
+	}
+
+	initializeClient(): void {
 		if (!this.client) {
-			this.plugin.ensureClientForView(this);
+			this.client = new ACPClient(this.plugin.app, this.plugin.settings, this.plugin);
+			this.setClient(this.client);
 		}
 	}
 
@@ -191,6 +211,21 @@ export class AgentView extends ItemView {
 		if (this.sessionIdInput && this.loadSessionButton) {
 			this.sessionIdInput.toggleClass('acp-hidden', !supportsLoadSession);
 			this.loadSessionButton.toggleClass('acp-hidden', !supportsLoadSession);
+		}
+	}
+
+	private updateViewTitle(): void {
+		// Update the tab title element if it exists
+		// Try multiple possible locations for the title element
+		const leaf = this.leaf as any;
+		const headerEl = leaf.tabHeaderEl || leaf.tabHeaderInnerTitleEl;
+		if (headerEl && headerEl.setText) {
+			headerEl.setText(this.getDisplayText());
+		}
+		// Also try to find the title element in the view header
+		const viewHeaderTitle = this.containerEl.querySelector('.view-header-title');
+		if (viewHeaderTitle) {
+			viewHeaderTitle.setText(this.getDisplayText());
 		}
 	}
 
@@ -375,6 +410,14 @@ export class AgentView extends ItemView {
 		if (update.type === 'turn_complete') {
 			this.endAgentTurn();
 
+			// Save conversation to file if tracking enabled
+			if (this.plugin.settings.enableConversationTracking) {
+				this.saveConversationToFile().catch((err) => {
+					new Notice(`Failed to save conversation: ${err.message}`);
+					console.error('Conversation tracking error:', err);
+				});
+			}
+
 			// Trigger git integration if enabled
 			if (this.plugin.settings.enableGitIntegration && this.gitIntegration) {
 				this.gitIntegration.autoCommitIfNeeded().catch((err) => {
@@ -516,6 +559,39 @@ export class AgentView extends ItemView {
 		const message = new TextMessage(messageId, sender, content, this.component);
 
 		await this.messageRenderer.addMessage(message);
+	}
+
+	private async saveConversationToFile(): Promise<void> {
+		if (!this.client) return;
+
+		const sessionId = this.client.getSessionId();
+		if (!sessionId) return;
+
+		try {
+			const folder = this.plugin.settings.conversationTrackingFolder;
+			const filePath = `${folder}${sessionId}.md`;
+
+			// Ensure folder exists
+			await this.ensureConversationFolder(folder);
+
+			// Write conversation
+			await this.messageRenderer.writeConversationToFile(
+				this.app.vault,
+				filePath,
+				sessionId
+			);
+		} catch (error) {
+			throw error;
+		}
+	}
+
+	private async ensureConversationFolder(folder: string): Promise<void> {
+		// Remove trailing slash for folder existence check
+		const folderPath = folder.endsWith('/') ? folder.slice(0, -1) : folder;
+
+		if (!(await this.app.vault.adapter.exists(folderPath))) {
+			await this.app.vault.createFolder(folderPath);
+		}
 	}
 
 	async onClose(): Promise<void> {

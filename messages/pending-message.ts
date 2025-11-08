@@ -21,4 +21,9 @@ export class PendingMessage extends Message {
 
 		return messageEl;
 	}
+
+	toMarkdown(): string {
+		// Don't track pending messages in conversation history
+		return '';
+	}
 }

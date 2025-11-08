@@ -1,4 +1,4 @@
-import { Component } from 'obsidian';
+import { Component, Vault, TFile } from 'obsidian';
 import { Message } from './base-message';
 import { TextMessage } from './text-message';
 import { ThoughtMessage } from './thought-message';
@@ -274,5 +274,47 @@ export class MessageRenderer {
 	 */
 	private scrollToBottom(): void {
 		this.container.scrollTop = this.container.scrollHeight;
+	}
+
+	/**
+	 * Get all messages as markdown for conversation tracking.
+	 */
+	getConversationMarkdown(sessionId: string): string {
+		const parts: string[] = [];
+
+		// Add header
+		const timestamp = new Date().toLocaleString();
+		parts.push(`# Conversation: ${sessionId}`);
+		parts.push(`Started: ${timestamp}`);
+		parts.push('');
+		parts.push('---');
+		parts.push('');
+
+		// Iterate through messages in order and convert to markdown
+		for (const message of this.messages.values()) {
+			const markdown = message.toMarkdown();
+			if (markdown) {
+				parts.push(markdown);
+				parts.push('');
+				parts.push('---');
+				parts.push('');
+			}
+		}
+
+		return parts.join('\n');
+	}
+
+	/**
+	 * Write the conversation to a file in the vault.
+	 */
+	async writeConversationToFile(vault: Vault, filePath: string, sessionId: string): Promise<void> {
+		const markdown = this.getConversationMarkdown(sessionId);
+		const file = vault.getAbstractFileByPath(filePath);
+
+		if (file instanceof TFile) {
+			await vault.modify(file, markdown);
+		} else {
+			await vault.create(filePath, markdown);
+		}
 	}
 }

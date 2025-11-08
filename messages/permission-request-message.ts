@@ -89,4 +89,9 @@ export class PermissionRequestMessage extends Message {
 
 		return messageEl;
 	}
+
+	toMarkdown(): string {
+		// Don't track permission requests in conversation history
+		return '';
+	}
 }

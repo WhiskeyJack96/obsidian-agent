@@ -11,8 +11,7 @@ import { ObsidianMCPServer } from './mcp-server';
 
 export default class ACPClientPlugin extends Plugin {
 	settings: ACPClientSettings;
-	private client: ACPClient | null = null;
-	private gitIntegration: GitIntegration | null = null;
+	gitIntegration: GitIntegration | null = null;
 	private mcpServer: ObsidianMCPServer | null = null;
 
 	async onload() {
@@ -49,36 +48,12 @@ export default class ACPClientPlugin extends Plugin {
 			this.activateView();
 		});
 
-		// Add command to open agent view
+		// Add command to open agent view (creates new conversation)
 		this.addCommand({
 			id: 'open-agent-view',
 			name: 'Open Agent View',
 			callback: () => {
 				this.activateView();
-			}
-		});
-
-		// Add command to connect to agent
-		this.addCommand({
-			id: 'connect-to-agent',
-			name: 'Connect to Agent',
-			callback: async () => {
-				const view = await this.getAgentView();
-				if (view) {
-					await view.connect();
-				}
-			}
-		});
-
-		// Add command to disconnect from agent
-		this.addCommand({
-			id: 'disconnect-from-agent',
-			name: 'Disconnect from Agent',
-			callback: async () => {
-				const view = await this.getAgentView();
-				if (view) {
-					await view.disconnect();
-				}
 			}
 		});
 
@@ -92,11 +67,6 @@ export default class ACPClientPlugin extends Plugin {
 	}
 
 	async onunload() {
-		// Clean up client
-		if (this.client) {
-			await this.client.cleanup();
-		}
-
 		// Stop MCP server
 		if (this.mcpServer) {
 			await this.stopMCPServer();
@@ -107,63 +77,27 @@ export default class ACPClientPlugin extends Plugin {
 		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AGENT);
 		for (const leaf of leaves) {
 			const view = leaf.view as AgentView;
-			// Only initialize if view is fully loaded and has setClient method
-			if (view && typeof view.setClient === 'function') {
-				this.ensureClientForView(view);
+			// Each view creates its own client
+			if (view && typeof view.initializeClient === 'function') {
+				view.initializeClient();
+
+				// Set git integration for auto-commit after agent turns
+				if (this.gitIntegration) {
+					view.setGitIntegration(this.gitIntegration);
+				}
 			}
-		}
-	}
-
-	ensureClientForView(view: AgentView) {
-		if (!this.client) {
-			this.client = new ACPClient(this.app, this.settings, this);
-		}
-		view.setClient(this.client);
-
-		// Set git integration for auto-commit after agent turns
-		if (this.gitIntegration) {
-			view.setGitIntegration(this.gitIntegration);
 		}
 	}
 
 	async activateView() {
 		const { workspace } = this.app;
 
-		let leaf: WorkspaceLeaf | null = null;
-		const leaves = workspace.getLeavesOfType(VIEW_TYPE_AGENT);
-
-		if (leaves.length > 0) {
-			// A leaf with our view already exists, use that
-			leaf = leaves[0];
-		} else {
-			// Our view could not be found in the workspace, create a new leaf
-			// in the right sidebar for it
-			leaf = workspace.getRightLeaf(false);
-			if (leaf) {
-				await leaf.setViewState({ type: VIEW_TYPE_AGENT, active: true });
-			}
-		}
-
-		// "Reveal" the leaf in case it is in a collapsed sidebar
+		// Always create a new conversation in the right sidebar
+		const leaf = workspace.getRightLeaf(false);
 		if (leaf) {
+			await leaf.setViewState({ type: VIEW_TYPE_AGENT, active: true });
 			workspace.revealLeaf(leaf);
 		}
-
-		// Initialize client for the view
-		if (leaf) {
-			const view = leaf.view as AgentView;
-			if (view) {
-				this.ensureClientForView(view);
-			}
-		}
-	}
-
-	async getAgentView(): Promise<AgentView | null> {
-		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AGENT);
-		if (leaves.length > 0) {
-			return leaves[0].view as AgentView;
-		}
-		return null;
 	}
 
 	async openPlanView(planData: Plan): Promise<void> {

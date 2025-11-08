@@ -23,6 +23,12 @@ export abstract class Message {
 	abstract render(container: HTMLElement): HTMLElement | Promise<HTMLElement>;
 
 	/**
+	 * Convert the message to markdown format for conversation tracking.
+	 * Return empty string if message should not be tracked.
+	 */
+	abstract toMarkdown(): string;
+
+	/**
 	 * Update the message with new data (optional, not all messages support updates).
 	 */
 	update?(data: any): void;

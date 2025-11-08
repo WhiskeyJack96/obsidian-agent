@@ -46,4 +46,9 @@ export class CommandsMessage extends Message {
 			}
 		}
 	}
+
+	toMarkdown(): string {
+		// Don't track command messages in conversation history
+		return '';
+	}
 }

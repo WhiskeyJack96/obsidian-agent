@@ -169,4 +169,43 @@ export class ToolCallMessage extends Message {
 	getData(): ToolCallUpdate {
 		return this.data;
 	}
+
+	toMarkdown(): string {
+		const timestamp = this.timestamp.toLocaleTimeString();
+		const title = this.generateToolTitle();
+		const parts: string[] = [];
+
+		parts.push(`## Tool Call: ${title} (${timestamp})`);
+		parts.push('');
+
+		// Add status
+		if (this.data.status) {
+			parts.push(`**Status:** ${this.data.status}`);
+			parts.push('');
+		}
+
+		// Add raw input as JSON if available
+		if (this.data.rawInput) {
+			parts.push('**Input:**');
+			parts.push('```json');
+			parts.push(JSON.stringify(this.data.rawInput, null, 2));
+			parts.push('```');
+			parts.push('');
+		}
+
+		// Add output if available and completed
+		if (this.data.status === 'completed' && this.data.content && Array.isArray(this.data.content) && this.data.content.length > 0) {
+			parts.push('**Output:**');
+			for (const block of this.data.content) {
+				if (block.type === 'content' && block.content.type === 'text') {
+					parts.push('```');
+					parts.push(block.content.text);
+					parts.push('```');
+				}
+			}
+			parts.push('');
+		}
+
+		return parts.join('\n');
+	}
 }

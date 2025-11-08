@@ -21,4 +21,9 @@ export class DebugMessage extends Message {
 
 		return messageEl;
 	}
+
+	toMarkdown(): string {
+		// Don't track debug messages in conversation history
+		return '';
+	}
 }

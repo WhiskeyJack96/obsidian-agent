@@ -8,11 +8,13 @@ import { ACPClientSettings, DEFAULT_SETTINGS } from './settings';
 import { Plan } from './types';
 import { GitIntegration } from './git-integration';
 import { ObsidianMCPServer } from './mcp-server';
+import { TriggerManager } from './trigger-manager';
 
 export default class ACPClientPlugin extends Plugin {
 	settings: ACPClientSettings;
 	gitIntegration: GitIntegration | null = null;
 	private mcpServer: ObsidianMCPServer | null = null;
+	private triggerManager: TriggerManager | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -64,9 +66,18 @@ export default class ACPClientPlugin extends Plugin {
 		if (this.settings.enableMCPServer) {
 			this.startMCPServer();
 		}
+
+		// Initialize trigger manager
+		this.triggerManager = new TriggerManager(this);
+		this.triggerManager.registerListeners();
 	}
 
 	async onunload() {
+		// Clean up trigger manager
+		if (this.triggerManager) {
+			this.triggerManager.cleanup();
+		}
+
 		// Stop MCP server
 		if (this.mcpServer) {
 			await this.stopMCPServer();
@@ -89,7 +100,7 @@ export default class ACPClientPlugin extends Plugin {
 		}
 	}
 
-	async activateView() {
+	async activateView(initialPrompt?: string) {
 		const { workspace } = this.app;
 
 		// Always create a new conversation in the right sidebar
@@ -97,6 +108,14 @@ export default class ACPClientPlugin extends Plugin {
 		if (leaf) {
 			await leaf.setViewState({ type: VIEW_TYPE_AGENT, active: true });
 			workspace.revealLeaf(leaf);
+
+			// If an initial prompt is provided, send it to the view
+			if (initialPrompt) {
+				const view = leaf.view as AgentView;
+				if (view && typeof view.setInitialPrompt === 'function') {
+					view.setInitialPrompt(initialPrompt);
+				}
+			}
 		}
 	}
 

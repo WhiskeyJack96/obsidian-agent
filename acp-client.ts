@@ -46,6 +46,7 @@ export class ACPClient {
 		const	command = this.settings.agentCommand;
 		const 	args = this.settings.agentArgs;
 		const userEnv = await shellEnv()
+		console.log(command, args, userEnv)
 		this.process = spawn(command, args, {
 			stdio: ['pipe', 'pipe', 'pipe'],
 			env: {...process.env, ...userEnv},

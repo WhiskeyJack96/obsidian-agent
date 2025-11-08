@@ -49,6 +49,7 @@ export class AgentView extends ItemView {
 	private autocompleteManager: AutocompleteManager | null = null;
 	private connectionState: ConnectionState = ConnectionState.NOT_CONNECTED;
 	private messageRenderer: MessageRenderer;
+	private initialPrompt: string | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: ACPClientPlugin) {
 		super(leaf);
@@ -214,23 +215,40 @@ export class AgentView extends ItemView {
 		}
 	}
 
-	private updateViewTitle(): void {
-		// Update the tab title element if it exists
-		// Try multiple possible locations for the title element
-		const leaf = this.leaf as any;
-		const headerEl = leaf.tabHeaderEl || leaf.tabHeaderInnerTitleEl;
-		if (headerEl && headerEl.setText) {
-			headerEl.setText(this.getDisplayText());
-		}
-		// Also try to find the title element in the view header
-		const viewHeaderTitle = this.containerEl.querySelector('.view-header-title');
-		if (viewHeaderTitle) {
-			viewHeaderTitle.setText(this.getDisplayText());
+	setGitIntegration(gitIntegration: GitIntegration): void {
+		this.gitIntegration = gitIntegration;
+	}
+
+	setInitialPrompt(prompt: string): void {
+		this.initialPrompt = prompt;
+		// If already connected, send immediately
+		if (this.connectionState === ConnectionState.SESSION_ACTIVE) {
+			this.sendInitialPrompt();
 		}
 	}
 
-	setGitIntegration(gitIntegration: GitIntegration): void {
-		this.gitIntegration = gitIntegration;
+	private async sendInitialPrompt(): Promise<void> {
+		if (!this.initialPrompt || !this.client) {
+			return;
+		}
+
+		const prompt = this.initialPrompt;
+		this.initialPrompt = null; // Clear to prevent duplicate sends
+
+		// Show a visual indicator that this was triggered
+		this.addMessage('system', '🤖 Triggered by vault event');
+
+		// Add user message and send to agent
+		this.addMessage('user', prompt);
+		this.startAgentTurn();
+
+		try {
+			await this.client.sendPrompt(prompt);
+		} catch (err) {
+			new Notice(`Failed to send triggered message: ${err.message}`);
+			console.error('Send error:', err);
+			this.endAgentTurn();
+		}
 	}
 
 	private updateConnectionState(state: ConnectionState): void {
@@ -275,6 +293,11 @@ export class AgentView extends ItemView {
 			const sessionId = this.client.getSessionId();
 			if (sessionId) {
 				this.addMessage('system', `Session started. Session ID: ${sessionId}`);
+			}
+
+			// Send initial prompt if one was set (e.g., from trigger)
+			if (this.initialPrompt) {
+				await this.sendInitialPrompt();
 			}
 		} catch (err) {
 			this.updateConnectionState(ConnectionState.CONNECTION_FAILED);
@@ -567,7 +590,6 @@ export class AgentView extends ItemView {
 		const sessionId = this.client.getSessionId();
 		if (!sessionId) return;
 
-		try {
 			const folder = this.plugin.settings.conversationTrackingFolder;
 			const filePath = `${folder}${sessionId}.md`;
 
@@ -580,9 +602,6 @@ export class AgentView extends ItemView {
 				filePath,
 				sessionId
 			);
-		} catch (error) {
-			throw error;
-		}
 	}
 
 	private async ensureConversationFolder(folder: string): Promise<void> {

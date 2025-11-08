@@ -654,6 +654,131 @@
 	color: var(--text-on-accent);
 }
 
+/* Settings Tab Styles */
+
+/* Alpha Features Warning Container */
+.acp-alpha-warning-container {
+	margin-bottom: 15px;
+	padding: 10px;
+	background-color: var(--background-secondary);
+	border-radius: 5px;
+	border: 1px solid var(--text-warning);
+}
+
+/* Setting with Alpha/Warning Border */
+.acp-setting-alpha-border {
+	border-left: 3px solid var(--text-warning) !important;
+	padding-left: 10px !important;
+}
+
+/* Alpha Section Headers */
+.acp-alpha-section-header {
+	color: var(--text-warning);
+	margin-top: 20px;
+	margin-bottom: 10px;
+	font-size: 1.1em;
+}
+
+/* Info Text Styling */
+.acp-info-text {
+	margin-top: 10px;
+	font-style: italic;
+	color: var(--text-muted);
+}
+
+.acp-info-text-bottom-margin {
+	margin-bottom: 15px;
+	font-style: italic;
+	color: var(--text-muted);
+}
+
+/* Empty State Message */
+.acp-empty-message {
+	margin-bottom: 15px;
+	font-style: italic;
+}
+
+/* Trigger Item Container */
+.acp-trigger-item {
+	border: 1px solid var(--text-warning);
+	border-left: 3px solid var(--text-warning);
+	border-radius: 5px;
+	padding: 10px;
+	margin-bottom: 10px;
+	position: relative;
+	background-color: var(--background-secondary);
+}
+
+/* Full Width Text Input */
+.acp-full-width-input {
+	width: 100%;
+}
+
+/* Folder Autocomplete Wrapper */
+.acp-folder-autocomplete-wrapper {
+	position: relative;
+	display: inline-block;
+	width: 100%;
+}
+
+/* Folder Autocomplete Container */
+.acp-folder-autocomplete {
+	position: absolute;
+	display: none;
+	background-color: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	max-height: 200px;
+	overflow-y: auto;
+	z-index: 1000;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	width: 100%;
+	top: 100%;
+	left: 0;
+	margin-top: 2px;
+}
+
+.acp-folder-autocomplete.visible {
+	display: block;
+}
+
+/* Folder Autocomplete Item */
+.acp-folder-autocomplete-item {
+	padding: 8px 12px;
+	cursor: pointer;
+	text-align: left;
+}
+
+.acp-folder-autocomplete-item.special {
+	font-style: italic;
+	color: var(--text-muted);
+}
+
+.acp-folder-autocomplete-item:hover,
+.acp-folder-autocomplete-item.selected {
+	background-color: var(--background-modifier-hover);
+}
+
+/* Folder Warning Messages */
+.acp-folder-warning {
+	margin-top: 5px;
+}
+
+.acp-folder-warning.error {
+	color: var(--text-error);
+	font-weight: bold;
+}
+
+.acp-folder-warning.info {
+	color: var(--text-warning);
+	font-style: italic;
+}
+
+/* Input Validation States */
+.acp-input-error {
+	border-color: var(--text-error) !important;
+}
+
 /* New Conversation Button */
 .acp-new-conversation-button {
 	padding: 6px 12px;

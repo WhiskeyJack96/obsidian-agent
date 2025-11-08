@@ -100,13 +100,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		// Alpha Features section
 		containerEl.createEl('h2', { text: 'Alpha Features' });
 
-		const alphaWarningContainer = containerEl.createDiv();
-		alphaWarningContainer.addClass('setting-item-description');
-		alphaWarningContainer.style.marginBottom = '15px';
-		alphaWarningContainer.style.padding = '10px';
-		alphaWarningContainer.style.backgroundColor = 'var(--background-secondary)';
-		alphaWarningContainer.style.borderRadius = '5px';
-		alphaWarningContainer.style.border = '1px solid var(--text-warning)';
+		const alphaWarningContainer = containerEl.createDiv({ cls: 'acp-alpha-warning-container setting-item-description' });
 		alphaWarningContainer.innerHTML = '<strong>⚠️ ALPHA:</strong> These features are experimental and may change or be removed in future versions. Use with caution.';
 
 		// Obsidian Focussed Prompt
@@ -119,15 +113,10 @@ export class ACPClientSettingTab extends PluginSettingTab {
 					this.plugin.settings.obsidianFocussedPrompt = value;
 					await this.plugin.saveSettings();
 				}));
-		obsidianPromptSetting.settingEl.style.borderLeft = '3px solid var(--text-warning)';
-		obsidianPromptSetting.settingEl.style.paddingLeft = '10px';
+		obsidianPromptSetting.settingEl.addClass('acp-setting-alpha-border');
 
 		// MCP Server section
-		const mcpHeader = containerEl.createEl('h4', { text: 'MCP Server' });
-		mcpHeader.style.color = 'var(--text-warning)';
-		mcpHeader.style.marginTop = '20px';
-		mcpHeader.style.marginBottom = '10px';
-		mcpHeader.style.fontSize = '1.1em';
+		const mcpHeader = containerEl.createEl('h4', { text: 'MCP Server', cls: 'acp-alpha-section-header' });
 
 		const mcpEnableSetting = new Setting(containerEl)
 			.setName('Enable MCP Server')
@@ -145,8 +134,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 						await this.plugin.stopMCPServer();
 					}
 				}));
-		mcpEnableSetting.settingEl.style.borderLeft = '3px solid var(--text-warning)';
-		mcpEnableSetting.settingEl.style.paddingLeft = '10px';
+		mcpEnableSetting.settingEl.addClass('acp-setting-alpha-border');
 
 		const mcpPortSetting = new Setting(containerEl)
 			.setName('MCP Server Port')
@@ -166,36 +154,21 @@ export class ACPClientSettingTab extends PluginSettingTab {
 						}
 					}
 				}));
-		mcpPortSetting.settingEl.style.borderLeft = '3px solid var(--text-warning)';
-		mcpPortSetting.settingEl.style.paddingLeft = '10px';
+		mcpPortSetting.settingEl.addClass('acp-setting-alpha-border');
 
 		// Add MCP server info
-		const mcpInfoEl = containerEl.createDiv();
-		mcpInfoEl.addClass('setting-item-description');
+		const mcpInfoEl = containerEl.createDiv({ cls: 'acp-info-text setting-item-description' });
 		mcpInfoEl.setText(`MCP Server endpoint: http://localhost:${this.plugin.settings.mcpServerPort}/mcp`);
-		mcpInfoEl.style.marginTop = '10px';
-		mcpInfoEl.style.fontStyle = 'italic';
-		mcpInfoEl.style.color = 'var(--text-muted)';
 
 		// Automated Triggers section
-		const triggersHeader = containerEl.createEl('h4', { text: 'Automated Triggers' });
-		triggersHeader.style.color = 'var(--text-warning)';
-		triggersHeader.style.marginTop = '20px';
-		triggersHeader.style.marginBottom = '10px';
-		triggersHeader.style.fontSize = '1.1em';
+		const triggersHeader = containerEl.createEl('h4', { text: 'Automated Triggers', cls: 'acp-alpha-section-header' });
 
-		const triggersDesc = containerEl.createDiv();
-		triggersDesc.addClass('setting-item-description');
+		const triggersDesc = containerEl.createDiv({ cls: 'acp-info-text-bottom-margin setting-item-description' });
 		triggersDesc.setText('Automatically trigger agent sessions when files are created or modified in specific folders.');
-		triggersDesc.style.marginBottom = '15px';
 
 		// Add info about placeholders
-		const placeholderInfo = containerEl.createDiv();
-		placeholderInfo.addClass('setting-item-description');
+		const placeholderInfo = containerEl.createDiv({ cls: 'acp-info-text-bottom-margin setting-item-description' });
 		placeholderInfo.setText('Available placeholders: {file} (file path), {event} (created/modified), {content} (file contents)');
-		placeholderInfo.style.marginBottom = '15px';
-		placeholderInfo.style.fontStyle = 'italic';
-		placeholderInfo.style.color = 'var(--text-muted)';
 
 		// Display existing triggers
 		this.displayTriggers(containerEl);
@@ -214,11 +187,8 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		const triggersContainer = containerEl.createDiv({ cls: 'acp-triggers-list' });
 
 		if (this.plugin.settings.triggers.length === 0) {
-			const emptyMsg = triggersContainer.createDiv();
-			emptyMsg.addClass('setting-item-description');
+			const emptyMsg = triggersContainer.createDiv({ cls: 'acp-empty-message setting-item-description' });
 			emptyMsg.setText('No triggers configured. Click "Add New Trigger" to create one.');
-			emptyMsg.style.marginBottom = '15px';
-			emptyMsg.style.fontStyle = 'italic';
 			return;
 		}
 
@@ -229,13 +199,6 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
 	private displayTrigger(container: HTMLElement, trigger: TriggerConfig): void {
 		const triggerContainer = container.createDiv({ cls: 'acp-trigger-item' });
-		triggerContainer.style.border = '1px solid var(--text-warning)';
-		triggerContainer.style.borderLeft = '3px solid var(--text-warning)';
-		triggerContainer.style.borderRadius = '5px';
-		triggerContainer.style.padding = '10px';
-		triggerContainer.style.marginBottom = '10px';
-		triggerContainer.style.position = 'relative'; // For autocomplete positioning
-		triggerContainer.style.backgroundColor = 'var(--background-secondary)';
 
 		// Enabled toggle
 		new Setting(triggerContainer)
@@ -257,18 +220,18 @@ export class ACPClientSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						// Check for conflict with conversation tracking folder
 						if (this.isConflictingWithConversationFolder(value)) {
-							text.inputEl.style.borderColor = 'var(--text-error)';
+							text.inputEl.addClass('acp-input-error');
 							this.showFolderWarning(folderSetting, 'error');
 							// Don't save if there's a conflict
 							return;
 						} else if (value === '.' && this.plugin.settings.enableConversationTracking) {
 							// Show info warning for "." with conversation tracking
-							text.inputEl.style.borderColor = '';
+							text.inputEl.removeClass('acp-input-error');
 							this.showFolderWarning(folderSetting, 'info');
 							trigger.folder = value;
 							await this.plugin.saveSettings();
 						} else {
-							text.inputEl.style.borderColor = '';
+							text.inputEl.removeClass('acp-input-error');
 							this.showFolderWarning(folderSetting, false);
 							trigger.folder = value;
 							await this.plugin.saveSettings();
@@ -299,7 +262,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 				text.inputEl.rows = 3;
-				text.inputEl.style.width = '100%';
+				text.inputEl.addClass('acp-full-width-input');
 				return text;
 			});
 
@@ -400,16 +363,10 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		}
 
 		if (type === 'error') {
-			const warning = setting.descEl.createDiv({ cls: 'acp-folder-warning' });
-			warning.style.color = 'var(--text-error)';
-			warning.style.fontWeight = 'bold';
-			warning.style.marginTop = '5px';
+			const warning = setting.descEl.createDiv({ cls: 'acp-folder-warning error' });
 			warning.setText('⚠️ Cannot trigger on conversation tracking folder - this would create an infinite loop!');
 		} else if (type === 'info') {
-			const warning = setting.descEl.createDiv({ cls: 'acp-folder-warning' });
-			warning.style.color = 'var(--text-warning)';
-			warning.style.fontStyle = 'italic';
-			warning.style.marginTop = '5px';
+			const warning = setting.descEl.createDiv({ cls: 'acp-folder-warning info' });
 			warning.setText('ℹ️ Note: "." will trigger on ALL notes including conversation tracking files. This may trigger repeatedly on agent-created conversations.');
 		}
 	}
@@ -431,9 +388,6 @@ export class ACPClientSettingTab extends PluginSettingTab {
 	private setupFolderAutocomplete(inputEl: HTMLInputElement, trigger: TriggerConfig): void {
 		// Create a wrapper for positioning
 		const wrapper = createDiv({ cls: 'acp-folder-autocomplete-wrapper' });
-		wrapper.style.position = 'relative';
-		wrapper.style.display = 'inline-block';
-		wrapper.style.width = '100%';
 
 		// Wrap the input element
 		inputEl.parentElement?.insertBefore(wrapper, inputEl);
@@ -441,19 +395,6 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
 		// Create autocomplete container
 		const autocompleteContainer = createDiv({ cls: 'acp-folder-autocomplete' });
-		autocompleteContainer.style.position = 'absolute';
-		autocompleteContainer.style.display = 'none';
-		autocompleteContainer.style.backgroundColor = 'var(--background-primary)';
-		autocompleteContainer.style.border = '1px solid var(--background-modifier-border)';
-		autocompleteContainer.style.borderRadius = '4px';
-		autocompleteContainer.style.maxHeight = '200px';
-		autocompleteContainer.style.overflowY = 'auto';
-		autocompleteContainer.style.zIndex = '1000';
-		autocompleteContainer.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
-		autocompleteContainer.style.width = '100%';
-		autocompleteContainer.style.top = '100%';
-		autocompleteContainer.style.left = '0';
-		autocompleteContainer.style.marginTop = '2px';
 
 		// Append to wrapper
 		wrapper.appendChild(autocompleteContainer);
@@ -473,7 +414,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 			);
 
 			if (matches.length === 0) {
-				autocompleteContainer.style.display = 'none';
+				autocompleteContainer.removeClass('visible');
 				return;
 			}
 
@@ -481,47 +422,43 @@ export class ACPClientSettingTab extends PluginSettingTab {
 			selectedIndex = -1;
 
 			matches.forEach((folder, index) => {
-				const item = autocompleteContainer.createDiv({ cls: 'acp-autocomplete-item' });
-				item.style.padding = '8px 12px';
-				item.style.cursor = 'pointer';
-				item.style.textAlign = 'left';
+				const item = autocompleteContainer.createDiv({ cls: 'acp-folder-autocomplete-item' });
 				item.setAttribute('data-folder', folder); // Store actual value
 
 				// Add description for "." option
 				if (folder === '.') {
 					item.textContent = '. (all notes in vault)';
-					item.style.fontStyle = 'italic';
-					item.style.color = 'var(--text-muted)';
+					item.addClass('special');
 				} else {
 					item.textContent = folder;
 				}
 
 				item.addEventListener('mouseenter', () => {
 					// Remove highlight from all items
-					autocompleteContainer.querySelectorAll('.acp-autocomplete-item').forEach(el => {
-						(el as HTMLElement).style.backgroundColor = '';
+					autocompleteContainer.querySelectorAll('.acp-folder-autocomplete-item').forEach(el => {
+						(el as HTMLElement).removeClass('selected');
 					});
-					item.style.backgroundColor = 'var(--background-modifier-hover)';
+					item.addClass('selected');
 					selectedIndex = index;
 				});
 
 				item.addEventListener('click', () => {
 					inputEl.value = folder;
 					inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-					autocompleteContainer.style.display = 'none';
+					autocompleteContainer.removeClass('visible');
 				});
 			});
 
 			// Show the autocomplete
-			autocompleteContainer.style.display = 'block';
+			autocompleteContainer.addClass('visible');
 		};
 
 		const hideAutocomplete = () => {
-			autocompleteContainer.style.display = 'none';
+			autocompleteContainer.removeClass('visible');
 		};
 
 		const selectCurrent = () => {
-			const items = autocompleteContainer.querySelectorAll('.acp-autocomplete-item');
+			const items = autocompleteContainer.querySelectorAll('.acp-folder-autocomplete-item');
 			if (selectedIndex >= 0 && selectedIndex < items.length) {
 				const selectedFolder = items[selectedIndex].getAttribute('data-folder');
 				if (selectedFolder) {
@@ -535,10 +472,13 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		};
 
 		const highlightItem = (index: number) => {
-			const items = autocompleteContainer.querySelectorAll('.acp-autocomplete-item');
+			const items = autocompleteContainer.querySelectorAll('.acp-folder-autocomplete-item');
 			items.forEach((item, i) => {
-				(item as HTMLElement).style.backgroundColor =
-					i === index ? 'var(--background-modifier-hover)' : '';
+				if (i === index) {
+					(item as HTMLElement).addClass('selected');
+				} else {
+					(item as HTMLElement).removeClass('selected');
+				}
 			});
 		};
 
@@ -546,9 +486,9 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		inputEl.addEventListener('focus', showAutocomplete);
 
 		inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
-			const items = autocompleteContainer.querySelectorAll('.acp-autocomplete-item');
+			const items = autocompleteContainer.querySelectorAll('.acp-folder-autocomplete-item');
 
-			if (autocompleteContainer.style.display === 'none') return;
+			if (!autocompleteContainer.hasClass('visible')) return;
 
 			if (e.key === 'ArrowDown') {
 				e.preventDefault();

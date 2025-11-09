@@ -868,6 +868,64 @@
 	opacity: 0.6;
 }
 
+/* Write Approval Toggle Button - Pill Style */
+.acp-write-approval-toggle {
+	width: 42px;
+	height: 22px;
+	border: none;
+	border-radius: 11px;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	position: relative;
+	padding: 0;
+	box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Sliding knob */
+.acp-write-approval-toggle::before {
+	content: '';
+	position: absolute;
+	top: 2px;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background-color: white;
+	transition: all 0.3s ease;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Enabled state - warning styling */
+.acp-write-approval-toggle.acp-write-approval-enabled {
+	background-color: var(--text-warning);
+}
+
+.acp-write-approval-toggle.acp-write-approval-enabled::before {
+	left: 22px;
+	background-color: white;
+}
+
+.acp-write-approval-toggle.acp-write-approval-enabled:hover {
+	opacity: 0.9;
+}
+
+/* Disabled state - neutral styling */
+.acp-write-approval-toggle.acp-write-approval-disabled {
+	background-color: var(--background-modifier-border);
+}
+
+.acp-write-approval-toggle.acp-write-approval-disabled::before {
+	left: 2px;
+	background-color: var(--text-muted);
+}
+
+.acp-write-approval-toggle.acp-write-approval-disabled:hover {
+	background-color: var(--background-modifier-border-hover);
+}
+
+.acp-write-approval-toggle:active::before {
+	width: 22px;
+}
+
 /* Plan View Container */
 .acp-plan-view {
 	display: flex;

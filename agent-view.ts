@@ -42,6 +42,7 @@ export class AgentView extends ItemView {
 	private inputField: HTMLTextAreaElement;
 	private statusIndicator: HTMLElement;
 	private cancelButton: HTMLElement;
+	private writeApprovalToggle: HTMLElement;
 	private sessionIdInput: HTMLInputElement;
 	private loadSessionButton: HTMLElement;
 	private modeManager: ModeManager | null = null;
@@ -121,6 +122,17 @@ export class AgentView extends ItemView {
 		});
 		this.cancelButton.addClass('acp-hidden');
 		this.cancelButton.addEventListener('click', () => this.cancelCurrentTurn());
+
+		// Create write approval toggle button
+		this.writeApprovalToggle = statusBarContainer.createEl('button', {
+			cls: 'acp-write-approval-toggle',
+			attr: {
+				'aria-label': 'Toggle auto-approve write permissions',
+				'title': 'Auto-approve writes'
+			}
+		});
+		this.updateWriteApprovalToggle();
+		this.writeApprovalToggle.addEventListener('click', () => this.toggleWriteApproval());
 
 		// Create messages container
 		this.messagesContainer = container.createDiv({ cls: 'acp-messages' });
@@ -611,6 +623,39 @@ export class AgentView extends ItemView {
 		if (!(await this.app.vault.adapter.exists(folderPath))) {
 			await this.app.vault.createFolder(folderPath);
 		}
+	}
+
+	private updateWriteApprovalToggle(): void {
+		if (!this.writeApprovalToggle) return;
+
+		const isEnabled = this.plugin.settings.autoApproveWritePermission;
+
+		// Update button classes based on state
+		if (isEnabled) {
+			this.writeApprovalToggle.addClass('acp-write-approval-enabled');
+			this.writeApprovalToggle.removeClass('acp-write-approval-disabled');
+		} else {
+			this.writeApprovalToggle.addClass('acp-write-approval-disabled');
+			this.writeApprovalToggle.removeClass('acp-write-approval-enabled');
+		}
+
+		// Update tooltip
+		this.writeApprovalToggle.setAttribute('title',
+			isEnabled ? 'Auto-approve writes: ON (click to disable)' : 'Auto-approve writes: OFF (click to enable)'
+		);
+	}
+
+	private async toggleWriteApproval(): Promise<void> {
+		// Toggle the setting
+		this.plugin.settings.autoApproveWritePermission = !this.plugin.settings.autoApproveWritePermission;
+		await this.plugin.saveSettings();
+
+		// Update the button appearance
+		this.updateWriteApprovalToggle();
+
+		// Show feedback to user
+		const status = this.plugin.settings.autoApproveWritePermission ? 'enabled' : 'disabled';
+		new Notice(`Auto-approve writes ${status}`);
 	}
 
 	async onClose(): Promise<void> {

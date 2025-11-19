@@ -23,7 +23,7 @@ export class TextMessage extends Message {
 
 		// Render markdown for user and agent messages, plain text for system
 		if (this.sender === 'user' || this.sender === 'agent') {
-			await MarkdownRenderer.renderMarkdown(this.content, this.contentEl, '', this.component);
+			await MarkdownRenderer.renderMarkdown(this.content, this.contentEl, '/', this.component);
 		} else {
 			this.contentEl.setText(this.content);
 		}
@@ -41,7 +41,7 @@ export class TextMessage extends Message {
 			this.contentEl.empty();
 
 			if (this.sender === 'user' || this.sender === 'agent') {
-				await MarkdownRenderer.renderMarkdown(this.content, this.contentEl, '', this.component);
+				await MarkdownRenderer.renderMarkdown(this.content, this.contentEl, '/', this.component);
 			} else {
 				this.contentEl.setText(this.content);
 			}

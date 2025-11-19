@@ -42,7 +42,7 @@ export class ThoughtMessage extends Message {
 		this.contentEl = messageEl.createDiv({ cls: 'acp-thought-content' });
 
 		// Render markdown content
-		await MarkdownRenderer.renderMarkdown(this.content, this.contentEl, '', this.component);
+		await MarkdownRenderer.renderMarkdown(this.content, this.contentEl, '/', this.component);
 
 		// Apply initial collapsed state
 		this.updateCollapsedState();
@@ -85,7 +85,7 @@ export class ThoughtMessage extends Message {
 
 		if (this.contentEl) {
 			this.contentEl.empty();
-			await MarkdownRenderer.renderMarkdown(this.content, this.contentEl, '', this.component);
+			await MarkdownRenderer.renderMarkdown(this.content, this.contentEl, '/', this.component);
 			this.updateCollapsedState();
 		}
 	}

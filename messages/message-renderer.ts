@@ -1,4 +1,4 @@
-import { Component, Vault, TFile } from 'obsidian';
+import { App, Component, Vault, TFile } from 'obsidian';
 import { Message } from './base-message';
 import { TextMessage } from './text-message';
 import { ThoughtMessage } from './thought-message';
@@ -11,6 +11,7 @@ import { ToolCallUpdate, ContentBlock, AvailableCommand } from '../types';
  * Handles rendering, updating, and removing messages, as well as scroll management.
  */
 export class MessageRenderer {
+	private app: App;
 	private messages: Map<string, Message>;
 	private container: HTMLElement;
 	private component: Component;
@@ -20,10 +21,25 @@ export class MessageRenderer {
 	private commandsMessageId: string | null = null;
 	private toolCallCache: Map<string, ToolCallUpdate> = new Map();
 
-	constructor(container: HTMLElement, component: Component) {
+	constructor(app: App, container: HTMLElement, component: Component) {
+		this.app = app;
 		this.container = container;
 		this.component = component;
 		this.messages = new Map();
+
+		// Add click handler for internal links
+		this.container.addEventListener('click', (event) => {
+			const target = event.target as HTMLElement;
+			const anchor = target.closest('a.internal-link');
+
+			if (anchor) {
+				event.preventDefault();
+				const href = anchor.getAttribute('data-href');
+				if (href) {
+					this.app.workspace.openLinkText(href, '', false);
+				}
+			}
+		});
 	}
 
 	/**

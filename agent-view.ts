@@ -138,7 +138,7 @@ export class AgentView extends ItemView {
 		this.messagesContainer = container.createDiv({ cls: 'acp-messages' });
 
 		// Initialize message renderer
-		this.messageRenderer = new MessageRenderer(this.messagesContainer, this.component);
+		this.messageRenderer = new MessageRenderer(this.app, this.messagesContainer, this.component);
 
 		// Create input container
 		this.inputContainer = container.createDiv({ cls: 'acp-input-container' });

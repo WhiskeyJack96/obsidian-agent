@@ -249,6 +249,11 @@ export class ACPClient {
 			}]
 		});
 
+		// Clear tracked writes for this session now that the turn is complete
+		if (this.plugin.triggerManager && this.sessionId) {
+			this.plugin.triggerManager.clearTurnWrites(this.sessionId);
+		}
+
 		// Send turn_complete update when the agent finishes
 		if (this.updateCallback) {
 			this.updateCallback({
@@ -261,6 +266,11 @@ export class ACPClient {
 	async cancelSession(): Promise<void> {
 		if (!this.connection || !this.sessionId) {
 			return;
+		}
+
+		// Clear tracked writes when session is cancelled
+		if (this.plugin.triggerManager && this.sessionId) {
+			this.plugin.triggerManager.clearTurnWrites(this.sessionId);
 		}
 
 		await this.connection.cancel({
@@ -372,6 +382,11 @@ export class ACPClient {
 					throw new Error('User rejected the file write');
 				}
 				contentToWrite = result.editedText || params.content;
+			}
+
+			// Track this write to prevent trigger loops
+			if (this.plugin.triggerManager && this.sessionId) {
+				this.plugin.triggerManager.trackAgentWrite(this.sessionId, relativePath);
 			}
 
 			// User approved, proceed with write using edited content if provided
@@ -514,6 +529,11 @@ export class ACPClient {
 
 	cleanup(): Promise<void> {
 		return new Promise((resolve) => {
+			// Clear tracked writes for this session
+			if (this.plugin.triggerManager && this.sessionId) {
+				this.plugin.triggerManager.clearTurnWrites(this.sessionId);
+			}
+
 			// Clean up terminals
 			for (const terminal of this.terminals.values()) {
 				terminal.process.kill();

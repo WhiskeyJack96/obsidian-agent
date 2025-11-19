@@ -13,8 +13,8 @@ import { TriggerManager } from './trigger-manager';
 export default class ACPClientPlugin extends Plugin {
 	settings: ACPClientSettings;
 	gitIntegration: GitIntegration | null = null;
+	triggerManager: TriggerManager | null = null;
 	private mcpServer: ObsidianMCPServer | null = null;
-	private triggerManager: TriggerManager | null = null;
 
 	async onload() {
 		await this.loadSettings();

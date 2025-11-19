@@ -6,6 +6,39 @@ export class TriggerManager {
 	private plugin: ACPClientPlugin;
 	private vault: Vault;
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+	// Per-session tracking: sessionId → Set<filePath>
+	private turnWrittenFiles: Map<string, Set<string>> = new Map();
+
+	/**
+	 * Track a file written by an agent during the current turn.
+	 * Files tracked by any session will not trigger until that session's turn completes.
+	 */
+	trackAgentWrite(sessionId: string, filePath: string) {
+		if (!this.turnWrittenFiles.has(sessionId)) {
+			this.turnWrittenFiles.set(sessionId, new Set());
+		}
+		this.turnWrittenFiles.get(sessionId)!.add(filePath);
+	}
+
+	/**
+	 * Clear tracked agent writes for a specific session.
+	 * Call this when an agent turn completes.
+	 */
+	clearTurnWrites(sessionId: string) {
+		this.turnWrittenFiles.delete(sessionId);
+	}
+
+	/**
+	 * Check if a file is being tracked by any active session.
+	 */
+	private isFileTracked(filePath: string): boolean {
+		for (const files of this.turnWrittenFiles.values()) {
+			if (files.has(filePath)) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	constructor(plugin: ACPClientPlugin) {
 		this.plugin = plugin;
@@ -36,8 +69,12 @@ export class TriggerManager {
 	 * Handle vault events with debouncing
 	 */
 	private async handleVaultEvent(file: TFile, event: 'created' | 'modified') {
-
 		const filePath = file.path;
+
+		// Skip if this file was written by an agent during any active turn
+		if (this.isFileTracked(filePath)) {
+			return;
+		}
 
 		// Find matching triggers
 		const matchingTriggers = this.plugin.settings.triggers.filter(trigger => {

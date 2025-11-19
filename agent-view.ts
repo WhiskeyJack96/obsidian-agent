@@ -473,6 +473,8 @@ export class AgentView extends ItemView {
 
 		// Handle permission requests specially
 		if (update.type === 'permission_request') {
+			this.messageRenderer.removePendingMessage();
+			new Notice('Agent requires permission');
 			this.showPermissionRequest(update.data.params, update.data.resolve);
 			return;
 		}
@@ -573,7 +575,14 @@ export class AgentView extends ItemView {
 		this.messageRenderer.endCurrentThoughtMessage();
 
 		const permissionId = `permission-${Date.now()}`;
-		const message = new PermissionRequestMessage(permissionId, params, resolve, this.component);
+
+		// Wrap resolve to re-add pending message after user responds
+		const wrappedResolve = (response: RequestPermissionResponse) => {
+			this.messageRenderer.addMessage(new PendingMessage('pending', this.component));
+			resolve(response);
+		};
+
+		const message = new PermissionRequestMessage(permissionId, params, wrappedResolve, this.component);
 		this.messageRenderer.addMessage(message);
 	}
 

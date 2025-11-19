@@ -59,6 +59,30 @@ export default class ACPClientPlugin extends Plugin {
 			}
 		});
 
+		// Add command to cycle through modes
+		this.addCommand({
+			id: 'cycle-mode',
+			name: 'Cycle Agent Mode',
+			callback: () => {
+				// Try to get the active agent view first
+				let view = this.app.workspace.getActiveViewOfType(AgentView);
+
+				// If no active agent view, try to find any open agent view
+				if (!view) {
+					const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AGENT);
+					if (leaves.length > 0) {
+						view = leaves[0].view as AgentView;
+					}
+				}
+
+				if (view && typeof view.cycleMode === 'function') {
+					view.cycleMode();
+				} else {
+					new Notice('No agent view open');
+				}
+			}
+		});
+
 		// Add settings tab
 		this.addSettingTab(new ACPClientSettingTab(this.app, this));
 

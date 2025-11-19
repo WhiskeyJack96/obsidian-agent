@@ -90,7 +90,7 @@ export class AgentView extends ItemView {
 		// Create mode manager
 		this.modeManager = new ModeManager(
 			statusBarContainer,
-			(modeName) => this.addMessage('system', `Mode changed to: ${modeName}`)
+			() => {} // No system message on mode change
 		);
 
 		const newConversationButton = statusBarContainer.createEl('button', {
@@ -145,6 +145,14 @@ export class AgentView extends ItemView {
 
 		// Create autocomplete container (positioned absolutely above input)
 		const autocompleteContainer = this.inputContainer.createDiv({ cls: 'acp-autocomplete acp-hidden' });
+
+		// Create input toolbar with mode selector
+		const inputToolbar = this.inputContainer.createDiv({ cls: 'acp-input-toolbar' });
+
+		// Move mode selector from status bar to input toolbar
+		if (this.modeManager) {
+			inputToolbar.appendChild(this.modeManager.getElement());
+		}
 
 		this.inputField = this.inputContainer.createEl('textarea', {
 			cls: 'acp-input',
@@ -333,6 +341,30 @@ export class AgentView extends ItemView {
 		if (this.modeManager) {
 			this.modeManager.reset();
 		}
+	}
+
+	cycleMode(): void {
+		if (!this.modeManager || !this.client) {
+			new Notice('Agent not connected');
+			return;
+		}
+
+		const modeState = this.client.getModeState();
+		if (!modeState || modeState.availableModes.length === 0) {
+			new Notice('No modes available');
+			return;
+		}
+
+		const currentIndex = modeState.availableModes.findIndex(
+			m => m.id === modeState.currentModeId
+		);
+		const nextIndex = (currentIndex + 1) % modeState.availableModes.length;
+		const nextMode = modeState.availableModes[nextIndex];
+
+		// Update the selector and trigger the change
+		const selector = this.modeManager.getElement();
+		selector.value = nextMode.id;
+		selector.dispatchEvent(new Event('change'));
 	}
 
 	async newConversation(): Promise<void> {

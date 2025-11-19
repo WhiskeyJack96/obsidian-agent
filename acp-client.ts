@@ -5,8 +5,8 @@ import { ReadableStream, WritableStream } from 'stream/web';
 import { App, Notice, FileSystemAdapter, TFile } from 'obsidian';
 import { ACPClientSettings } from './settings';
 import * as schema from '@zed-industries/agent-client-protocol';
-import { readFile, readFileSync } from 'fs';
 import type ACPClientPlugin from './main';
+import {prompt} from './prompt'
 import { DiffData, DiffResult } from './diff-view';
 import {shellEnv} from 'shell-env';
 import { SessionUpdate, SessionModeState } from './types';
@@ -15,7 +15,7 @@ export class ACPClient {
 	private app: App;
 	private settings: ACPClientSettings;
 	private plugin: ACPClientPlugin;
-	private basePath: string;
+	private readonly basePath: string;
 	private process: ChildProcess | null = null;
 	private connection: ClientSideConnection | null = null;
 	private sessionId: string | null = null;
@@ -138,7 +138,7 @@ export class ACPClient {
 
 		let systemPrompt = undefined
 		if (this.settings.obsidianFocussedPrompt) {
-			systemPrompt = readFileSync("prompt.md")
+			systemPrompt = prompt
 		}
 
 		// Configure MCP servers

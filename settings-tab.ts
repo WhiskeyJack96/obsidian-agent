@@ -44,6 +44,19 @@ export class ACPClientSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+			.setName('Default View Location')
+			.setDesc('Where to open the agent view by default')
+			.addDropdown(dropdown => dropdown
+				.addOption('right-sidebar', 'Right Sidebar')
+				.addOption('left-sidebar', 'Left Sidebar')
+				.addOption('tab', 'New Tab (Main Area)')
+				.addOption('split', 'Split (Main Area)')
+				.setValue(this.plugin.settings.defaultViewType)
+				.onChange(async (value) => {
+					this.plugin.settings.defaultViewType = value as any;
+					await this.plugin.saveSettings();
+				}));
+		new Setting(containerEl)
 			.setName('Auto-approve Write Permission')
 			.setDesc('Automatically approve file write/edit requests from the agent')
 			.addToggle(toggle => toggle
@@ -54,15 +67,6 @@ export class ACPClientSettingTab extends PluginSettingTab {
 				}));
 
 
-		new Setting(containerEl)
-			.setName('Enable Git Integration')
-			.setDesc('Automatically commit changes after agent turns complete (requires obsidian-git plugin)')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableGitIntegration)
-				.onChange(async (value) => {
-					this.plugin.settings.enableGitIntegration = value;
-					await this.plugin.saveSettings();
-				}));
 
 		// Conversation Tracking section
 		containerEl.createEl('h2', { text: 'Conversation Tracking' });

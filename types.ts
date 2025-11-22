@@ -5,14 +5,12 @@
  * plugin-specific types that extend or complement the ACP types.
  */
 
-import * as schema from '@zed-industries/agent-client-protocol';
-
+import * as schema from '@agentclientprotocol/sdk';
 // Re-export commonly used ACP types for convenience
-export type {
+import type {
 	SessionNotification,
 	PlanEntry,
 	AvailableCommand,
-	ToolCallUpdate,
 	ContentBlock,
 	ToolCallContent,
 	ToolCallStatus,
@@ -22,7 +20,68 @@ export type {
 	RequestPermissionResponse,
 	SessionMode,
 	PromptResponse,
-} from '@zed-industries/agent-client-protocol';
+} from '@agentclientprotocol/sdk';
+
+export type {
+	SessionNotification,
+	PlanEntry,
+	AvailableCommand,
+	ContentBlock,
+	ToolCallContent,
+	ToolCallStatus,
+	ToolCallLocation,
+	ToolKind,
+	RequestPermissionRequest,
+	RequestPermissionResponse,
+	SessionMode,
+	PromptResponse,
+}
+
+
+export type ToolCallUpdate = {
+		/**
+		 * Extension point for implementations
+		 */
+		_meta?: {
+			[k: string]: unknown;
+		};
+		/**
+		 * Replace the content collection.
+		 */
+		content?: ToolCallContent[] | null;
+		/**
+		 * Update the tool kind.
+		 */
+		kind?: ToolKind | null;
+		/**
+		 * Replace the locations collection.
+		 */
+		locations?: ToolCallLocation[] | null;
+		/**
+		 * Update the raw input.
+		 */
+		rawInput?: {
+			[k: string]: unknown;
+		};
+		/**
+		 * Update the raw output.
+		 */
+		rawOutput?: {
+			[k: string]: unknown;
+		};
+		/**
+		 * Update the execution status.
+		 */
+		status?: ToolCallStatus | null;
+		/**
+		 * Update the human-readable title.
+		 */
+		title?: string | null;
+		/**
+		 * The ID of the tool call being updated.
+		 */
+		toolCallId: string;
+	};
 
 /**
  * Session mode state tracking available modes and current selection

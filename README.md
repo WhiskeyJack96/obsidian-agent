@@ -2,6 +2,10 @@
 
 An Obsidian plugin that implements an Agent Client Protocol (ACP) client, enabling integration with AI coding agents that support the ACP standard.
 
+## Compatibility
+
+This plugin is designed for **Desktop only** (Windows, macOS, Linux) as it requires access to local executables and child processes which are not available on mobile devices (iOS, Android).
+
 ## Quick Start
 
 ### Claude Code

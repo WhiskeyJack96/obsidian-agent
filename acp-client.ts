@@ -1,10 +1,10 @@
 import { spawn, ChildProcess } from 'child_process';
-import { ClientSideConnection, ndJsonStream, Client, Agent, AgentCapabilities } from '@zed-industries/agent-client-protocol';
+import { ClientSideConnection, ndJsonStream, Client, Agent, AgentCapabilities } from '@agentclientprotocol/sdk';
 import { Readable as NodeReadable, Writable as NodeWritable } from 'stream';
 import { ReadableStream, WritableStream } from 'stream/web';
 import { App, Notice, FileSystemAdapter, TFile } from 'obsidian';
 import { ACPClientSettings } from './settings';
-import * as schema from '@zed-industries/agent-client-protocol';
+import * as schema from '@agentclientprotocol/sdk';
 import type ACPClientPlugin from './main';
 import {prompt} from './prompt'
 import { DiffData, DiffResult } from './diff-view';

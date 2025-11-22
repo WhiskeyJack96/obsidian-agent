@@ -11,9 +11,9 @@ export interface ACPClientSettings {
 	agentArgs: string[];
 	autoApproveWritePermission: boolean;
 	obsidianFocussedPrompt: boolean;
-	enableGitIntegration: boolean;
 	enableMCPServer: boolean;
 	mcpServerPort: number;
+	defaultViewType: 'right-sidebar' | 'left-sidebar' | 'tab' | 'split';
 	enableConversationTracking: boolean;
 	conversationTrackingFolder: string;
 	triggers: TriggerConfig[];
@@ -24,9 +24,9 @@ export const DEFAULT_SETTINGS: ACPClientSettings = {
 	agentArgs: [],
 	autoApproveWritePermission: false,
 	obsidianFocussedPrompt: false,
-	enableGitIntegration: false,
 	enableMCPServer: false,
 	mcpServerPort: 3100,
+	defaultViewType: 'right-sidebar',
 	enableConversationTracking: false,
 	conversationTrackingFolder: 'conversations/',
 	triggers: []

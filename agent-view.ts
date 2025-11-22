@@ -3,7 +3,6 @@ import { ACPClient } from './acp-client';
 import type ACPClientPlugin from './main';
 import { AutocompleteManager } from './autocomplete-manager';
 import { ModeManager } from './mode-manager';
-import { GitIntegration } from './git-integration';
 import {
 	ContentBlock,
 	AvailableCommand,
@@ -36,7 +35,6 @@ export class AgentView extends ItemView {
 	private viewNumber: number;
 	private plugin: ACPClientPlugin;
 	private client: ACPClient | null = null;
-	private gitIntegration: GitIntegration | null = null;
 	private messagesContainer: HTMLElement;
 	private inputContainer: HTMLElement;
 	private inputField: HTMLTextAreaElement;
@@ -90,7 +88,7 @@ export class AgentView extends ItemView {
 		// Create mode manager
 		this.modeManager = new ModeManager(
 			statusBarContainer,
-			() => {} // No system message on mode change
+			(modeName) => this.addMessage('system', `Mode changed to: ${modeName}`)
 		);
 
 		const newConversationButton = statusBarContainer.createEl('button', {
@@ -194,10 +192,6 @@ export class AgentView extends ItemView {
 		// Initialize client when view opens (after all UI elements are created)
 		this.initializeClient();
 
-		// Set git integration
-		if (this.plugin.gitIntegration) {
-			this.setGitIntegration(this.plugin.gitIntegration);
-		}
 	}
 
 	initializeClient(): void {
@@ -235,9 +229,6 @@ export class AgentView extends ItemView {
 		}
 	}
 
-	setGitIntegration(gitIntegration: GitIntegration): void {
-		this.gitIntegration = gitIntegration;
-	}
 
 	setInitialPrompt(prompt: string): void {
 		this.initialPrompt = prompt;
@@ -485,12 +476,6 @@ export class AgentView extends ItemView {
 				});
 			}
 
-			// Trigger git integration if enabled
-			if (this.plugin.settings.enableGitIntegration && this.gitIntegration) {
-				this.gitIntegration.autoCommitIfNeeded().catch((err) => {
-					console.error('Git integration error:', err);
-				});
-			}
 
 			return;
 		}
@@ -697,6 +682,30 @@ export class AgentView extends ItemView {
 		// Show feedback to user
 		const status = this.plugin.settings.autoApproveWritePermission ? 'enabled' : 'disabled';
 		new Notice(`Auto-approve writes ${status}`);
+	}
+
+	focusInput(): void {
+		this.inputField.focus();
+	}
+
+	approvePermission(): void {
+		const primaryBtn = this.messagesContainer.querySelector('.acp-permission-primary') as HTMLElement;
+		if (primaryBtn) {
+			primaryBtn.click();
+		} else {
+			const firstBtn = this.messagesContainer.querySelector('.acp-permission-btn') as HTMLElement;
+			if (firstBtn) firstBtn.click();
+		}
+	}
+
+	rejectPermission(): void {
+		const rejectBtn = this.messagesContainer.querySelector('.acp-permission-danger') as HTMLElement;
+		if (rejectBtn) {
+			rejectBtn.click();
+		} else {
+			const secondaryBtn = this.messagesContainer.querySelector('.acp-permission-secondary') as HTMLElement;
+			if (secondaryBtn) secondaryBtn.click();
+		}
 	}
 
 	async onClose(): Promise<void> {

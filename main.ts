@@ -6,21 +6,31 @@ import { DiffView, VIEW_TYPE_DIFF, DiffData } from './diff-view';
 import { ACPClientSettingTab } from './settings-tab';
 import { ACPClientSettings, DEFAULT_SETTINGS } from './settings';
 import { Plan } from './types';
-import { GitIntegration } from './git-integration';
 import { ObsidianMCPServer } from './mcp-server';
 import { TriggerManager } from './trigger-manager';
 
 export default class ACPClientPlugin extends Plugin {
 	settings: ACPClientSettings;
-	gitIntegration: GitIntegration | null = null;
 	triggerManager: TriggerManager | null = null;
 	private mcpServer: ObsidianMCPServer | null = null;
+
+	getActiveAgentView(): AgentView | null {
+		// Try to get the active agent view first
+		let view = this.app.workspace.getActiveViewOfType(AgentView);
+
+		// If no active agent view, try to find any open agent view
+		if (!view) {
+			const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AGENT);
+			if (leaves.length > 0) {
+				view = leaves[0].view as AgentView;
+			}
+		}
+		return view;
+	}
 
 	async onload() {
 		await this.loadSettings();
 
-		// Initialize git integration
-		this.gitIntegration = new GitIntegration(this.app);
 
 		// Register the agent view
 		this.registerView(
@@ -64,22 +74,67 @@ export default class ACPClientPlugin extends Plugin {
 			id: 'cycle-mode',
 			name: 'Cycle Agent Mode',
 			callback: () => {
-				// Try to get the active agent view first
-				let view = this.app.workspace.getActiveViewOfType(AgentView);
-
-				// If no active agent view, try to find any open agent view
-				if (!view) {
-					const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AGENT);
-					if (leaves.length > 0) {
-						view = leaves[0].view as AgentView;
-					}
-				}
-
+				const view = this.getActiveAgentView();
 				if (view && typeof view.cycleMode === 'function') {
 					view.cycleMode();
 				} else {
 					new Notice('No agent view open');
 				}
+			}
+		});
+
+		// Add command to start new conversation
+		this.addCommand({
+			id: 'new-conversation',
+			name: 'New Conversation',
+			hotkeys: [{ modifiers: ["Mod", "Shift"], key: "N" }],
+			callback: () => {
+				const view = this.getActiveAgentView();
+				if (view) view.newConversation();
+			}
+		});
+
+		// Add command to focus input
+		this.addCommand({
+			id: 'focus-input',
+			name: 'Focus Input',
+			hotkeys: [{ modifiers: ["Mod", "Shift"], key: "I" }],
+			callback: () => {
+				const view = this.getActiveAgentView();
+				if (view) view.focusInput();
+			}
+		});
+
+		// Approve permission
+		this.addCommand({
+			id: 'approve-permission',
+			name: 'Approve Permission',
+			hotkeys: [{ modifiers: ["Mod"], key: "Enter" }],
+			callback: () => {
+				const view = this.getActiveAgentView();
+				if (view) view.approvePermission();
+			}
+		});
+
+		// Reject permission
+		this.addCommand({
+			id: 'reject-permission',
+			name: 'Reject Permission',
+			hotkeys: [{ modifiers: ["Mod"], key: "Backspace" }],
+			callback: () => {
+				const view = this.getActiveAgentView();
+				if (view) view.rejectPermission();
+			}
+		});
+
+		// Cancel operation
+		this.addCommand({
+			id: 'cancel-operation',
+			name: 'Cancel Operation',
+			hotkeys: [{ modifiers: ["Ctrl"], key: "c" }],
+			callback: () => {
+				const view = this.getActiveAgentView();
+				if (view) view.cancelCurrentTurn();
 			}
 		});
 
@@ -116,21 +171,34 @@ export default class ACPClientPlugin extends Plugin {
 			if (view && typeof view.initializeClient === 'function') {
 				view.initializeClient();
 
-				// Set git integration for auto-commit after agent turns
-				if (this.gitIntegration) {
-					view.setGitIntegration(this.gitIntegration);
-				}
 			}
 		}
 	}
 
 	async activateView(initialPrompt?: string) {
 		const { workspace } = this.app;
+		let leaf: WorkspaceLeaf | null = null;
+		const viewType = this.settings.defaultViewType;
 
-		// Always create a new conversation in the right sidebar
-		const leaf = workspace.getRightLeaf(false);
-		if (leaf) {
+		if (viewType === 'right-sidebar') {
+			leaf = workspace.getRightLeaf(false);
+			if (leaf) await leaf.setViewState({ type: VIEW_TYPE_AGENT, active: true });
+		} else if (viewType === 'left-sidebar') {
+			leaf = workspace.getLeftLeaf(false);
+			if (leaf) await leaf.setViewState({ type: VIEW_TYPE_AGENT, active: true });
+		} else if (viewType === 'tab') {
+			leaf = workspace.getLeaf('tab');
 			await leaf.setViewState({ type: VIEW_TYPE_AGENT, active: true });
+		} else if (viewType === 'split') {
+			leaf = workspace.getLeaf('split', 'vertical');
+			await leaf.setViewState({ type: VIEW_TYPE_AGENT, active: true });
+		} else {
+			// Fallback to right sidebar
+			leaf = workspace.getRightLeaf(false);
+			if (leaf) await leaf.setViewState({ type: VIEW_TYPE_AGENT, active: true });
+		}
+
+		if (leaf) {
 			workspace.revealLeaf(leaf);
 
 			// If an initial prompt is provided, send it to the view

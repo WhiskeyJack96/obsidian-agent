@@ -5,7 +5,9 @@ import { EventEmitter } from 'events';
 
 // Hoist mock function so it's accessible in factory and tests
 const mocks = vi.hoisted(() => ({
-    spawn: vi.fn()
+    spawn: vi.fn(),
+    ClientSideConnection: vi.fn(),
+    ndJsonStream: vi.fn()
 }));
 
 // Mock child_process
@@ -14,7 +16,23 @@ vi.mock('child_process', () => ({
     default: { spawn: mocks.spawn }
 }));
 
+// Mock shell-env
+vi.mock('shell-env', () => ({
+    shellEnv: vi.fn().mockResolvedValue({ PATH: '/mock/path' })
+}));
+
+// Mock @agentclientprotocol/sdk
+vi.mock('@agentclientprotocol/sdk', async (importOriginal) => {
+    const actual = await importOriginal<any>();
+    return {
+        ...actual,
+        ClientSideConnection: mocks.ClientSideConnection,
+        ndJsonStream: mocks.ndJsonStream
+    };
+});
+
 import { spawn } from 'child_process';
+import { ClientSideConnection } from '@agentclientprotocol/sdk';
 
 describe('ACPClient', () => {
     let app: App;
@@ -34,13 +52,20 @@ describe('ACPClient', () => {
         mockSettings = {
             agentCommand: 'echo',
             agentArgs: [],
-            autoApproveWritePermission: true
+            autoApproveWritePermission: true,
+            obsidianFocussedPrompt: false,
+            enableMCPServer: false
         };
 
         client = new ACPClient(app, mockSettings, mockPlugin);
         
         // Mock getVaultPath (private method, but we can mock the adapter)
         vi.spyOn(app.vault.adapter, 'getBasePath').mockReturnValue('/vault/root');
+
+        // Reset mocks
+        mocks.spawn.mockReset();
+        mocks.ClientSideConnection.mockReset();
+        mocks.ndJsonStream.mockReset();
     });
 
     afterEach(() => {
@@ -49,6 +74,89 @@ describe('ACPClient', () => {
 
     it('should be defined', () => {
         expect(client).toBeDefined();
+    });
+
+    describe('Lifecycle', () => {
+        let mockProcess: any;
+        let mockConnection: any;
+
+        beforeEach(() => {
+            mockProcess = new EventEmitter();
+            mockProcess.stdout = new EventEmitter();
+            mockProcess.stderr = new EventEmitter();
+            mockProcess.stdin = new EventEmitter();
+            mockProcess.stdin.write = vi.fn();
+            mockProcess.stdin.end = vi.fn();
+            mockProcess.kill = vi.fn();
+            
+            mocks.spawn.mockReturnValue(mockProcess);
+
+            mockConnection = {
+                initialize: vi.fn().mockResolvedValue({ agentCapabilities: { loadSession: true } }),
+                newSession: vi.fn().mockResolvedValue({ sessionId: 'sess-1', modes: { currentModeId: 'default', availableModes: [] } }),
+                prompt: vi.fn().mockResolvedValue({}),
+                cancel: vi.fn().mockResolvedValue(undefined),
+                loadSession: vi.fn().mockResolvedValue({ modes: { currentModeId: 'default', availableModes: [] } }),
+                setSessionMode: vi.fn().mockResolvedValue(undefined)
+            };
+
+            mocks.ClientSideConnection.mockImplementation(function() { return mockConnection; });
+            mocks.ndJsonStream.mockReturnValue({});
+        });
+
+        it('should initialize successfully', async () => {
+            await client.initialize();
+
+            expect(mocks.spawn).toHaveBeenCalled();
+            expect(mocks.ClientSideConnection).toHaveBeenCalled();
+            expect(mockConnection.initialize).toHaveBeenCalled();
+        });
+
+        it('should fail initialize if no command', async () => {
+            mockSettings.agentCommand = '';
+            await expect(client.initialize()).rejects.toThrow('Agent command not configured');
+        });
+
+        it('should create session', async () => {
+            await client.initialize();
+            await client.createSession();
+
+            expect(mockConnection.newSession).toHaveBeenCalled();
+            expect(client.getSessionId()).toBe('sess-1');
+        });
+
+        it('should fail create session if not connected', async () => {
+            await expect(client.createSession()).rejects.toThrow('Not connected to agent');
+        });
+
+        it('should send prompt', async () => {
+            await client.initialize();
+            await client.createSession();
+            await client.sendPrompt('hello');
+
+            expect(mockConnection.prompt).toHaveBeenCalledWith(expect.objectContaining({
+                sessionId: 'sess-1',
+                prompt: [{ type: 'text', text: 'hello' }]
+            }));
+        });
+
+        it('should cancel session', async () => {
+            await client.initialize();
+            await client.createSession();
+            await client.cancelSession();
+
+            expect(mockConnection.cancel).toHaveBeenCalledWith({ sessionId: 'sess-1' });
+        });
+
+        it('should load session', async () => {
+            await client.initialize();
+            await client.loadSession('sess-existing');
+
+            expect(mockConnection.loadSession).toHaveBeenCalledWith(expect.objectContaining({
+                sessionId: 'sess-existing'
+            }));
+            expect(client.getSessionId()).toBe('sess-existing');
+        });
     });
 
     describe('handleReadTextFile', () => {

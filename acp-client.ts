@@ -337,7 +337,24 @@ export class ACPClient {
 			}
 
 			const content = await this.app.vault.read(file);
-			return { content };
+
+			// Add backlinks to the content for context
+			let contextContent = content;
+			// @ts-ignore - getBacklinksForFile is not in the types yet
+			if (this.app.metadataCache.getBacklinksForFile) {
+				// @ts-ignore
+				const backlinks = this.app.metadataCache.getBacklinksForFile(file);
+				if (backlinks && backlinks.data && backlinks.data.size > 0) {
+					contextContent += '\n\n<!-- Backlinks (Added by ACP) -->\n# Backlinks\n';
+					const files = Array.from(backlinks.data.keys());
+					// @ts-ignore
+					files.forEach((path: string) => {
+						contextContent += `- [[${path}]]\n`;
+					});
+				}
+			}
+
+			return { content: contextContent };
 		} catch (err) {
 			console.error('File read error:', err);
 			throw new Error(`Failed to read file: ${err.message}`);

@@ -105,6 +105,26 @@ export default class ACPClientPlugin extends Plugin {
 			}
 		});
 
+		// Add command to start session for current note
+		this.addCommand({
+			id: 'start-session-current-note',
+			name: 'Start Session for Current Note',
+			callback: async () => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile) {
+					new Notice('No active note');
+					return;
+				}
+
+				await this.activateView();
+				const view = this.getActiveAgentView();
+				if (view) {
+					await view.newConversation();
+					view.setInitialPrompt(`Context: [[${activeFile.path}]]`);
+				}
+			}
+		});
+
 		// Approve permission
 		this.addCommand({
 			id: 'approve-permission',

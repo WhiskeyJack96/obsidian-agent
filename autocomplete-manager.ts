@@ -71,17 +71,17 @@ export class AutocompleteManager {
 			if (atMatch === 0 || /\s/.test(textBeforeCursor[atMatch - 1])) {
 				const afterAt = textBeforeCursor.substring(atMatch + 1);
 
-				// Check if this is @current_note trigger
-				if (afterAt.startsWith('current_note')) {
+				// Check if this is @open_files trigger
+				if (afterAt.startsWith('open_files')) {
 					triggerType = 'open_note';
 					triggerPos = atMatch;
-					// Extract query after 'current_note ' or empty if just 'current_note'
-					if (afterAt.length > 12 && afterAt[12] === ' ') {
-						query = afterAt.substring(13);
-					} else if (afterAt.length === 12) {
+					// Extract query after 'open_files ' or empty if just 'open_files'
+					if (afterAt.length > 10 && afterAt[10] === ' ') {
+						query = afterAt.substring(11);
+					} else if (afterAt.length === 10) {
 						query = '';
 					} else {
-						// Still typing 'current_note', don't show autocomplete yet
+						// Still typing 'open_files', don't show autocomplete yet
 						this.hide();
 						return;
 					}
@@ -100,7 +100,7 @@ export class AutocompleteManager {
 			} else if (triggerType === 'file') {
 				this.showFileAutocomplete(query, triggerPos);
 			} else if (triggerType === 'open_note') {
-				this.showCurrentNoteAutocomplete(query, triggerPos);
+				this.showOpenFilesAutocomplete(query, triggerPos);
 			}
 		} else {
 			this.hide();
@@ -149,6 +149,7 @@ export class AutocompleteManager {
 	private showFileAutocomplete(query: string, triggerPos: number): void {
 		// Get all files from vault
 		const files = this.app.vault.getMarkdownFiles();
+		const activeFile = this.app.workspace.getActiveFile();
 
 		const filtered = files
 			.filter(file =>
@@ -157,30 +158,43 @@ export class AutocompleteManager {
 			)
 			.slice(0, 50); // Limit to 50 results
 
-		// Always include the "current_note" expanding item if it matches the query
 		const items: AutocompleteItem[] = [];
-		const currentNoteQuery = 'current_note';
 
-		// Only show current_note item if the query matches it
-		if (currentNoteQuery.includes(query.toLowerCase())) {
+		// 1. Add Active File if it matches
+		if (activeFile && (activeFile.path.toLowerCase().includes(query.toLowerCase()) || activeFile.basename.toLowerCase().includes(query.toLowerCase()))) {
 			items.push({
 				type: 'file',
-				name: '● current_note (open files only)',
-				description: 'Show only open/active notes',
-				insertText: 'current_note ',
+				name: `★ Current Note: ${activeFile.basename}`,
+				path: activeFile.path,
+				insertText: activeFile.path,
+				triggerPos: triggerPos
+			});
+		}
+
+		// 2. Add "Open Files" expander
+		const openFilesQuery = 'open_files';
+		// Allow "current" or "open" to trigger this
+		if (openFilesQuery.includes(query.toLowerCase()) || 'current'.includes(query.toLowerCase())) {
+			items.push({
+				type: 'file',
+				name: '★ Open Files (Expand)',
+				description: 'Show all open/active notes',
+				insertText: 'open_files ',
 				triggerPos: triggerPos,
 				isExpanding: true
 			});
 		}
 
-		// Add filtered files
-		items.push(...filtered.map(file => ({
-			type: 'file' as const,
-			name: file.basename,
-			path: file.path,
-			insertText: file.path,
-			triggerPos: triggerPos
-		})));
+		// Add filtered files (exclude active file to avoid duplication if we added it)
+		items.push(...filtered
+			.filter(f => !activeFile || f.path !== activeFile.path)
+			.map(file => ({
+				type: 'file' as const,
+				name: file.basename,
+				path: file.path,
+				insertText: file.path,
+				triggerPos: triggerPos
+			})));
 
 		if (items.length === 0) {
 			this.hide();
@@ -190,7 +204,7 @@ export class AutocompleteManager {
 		this.render(items);
 	}
 
-	private showCurrentNoteAutocomplete(query: string, triggerPos: number): void {
+	private showOpenFilesAutocomplete(query: string, triggerPos: number): void {
 		const openFiles = this.getOpenFiles();
 
 		const filtered = openFiles

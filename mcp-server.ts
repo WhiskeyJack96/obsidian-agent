@@ -165,6 +165,53 @@ export class ObsidianMCPServer {
 				}
 			}
 		);
+
+		// Tool 3: Search notes
+		this.mcpServer.registerTool(
+			'search_notes',
+			{
+				title: 'Search Notes',
+				description: 'Search for notes in the vault by content or filename. Returns matching file paths.',
+				inputSchema: {
+					query: z.string().describe('The search query')
+				},
+				outputSchema: {
+					results: z.array(z.string())
+				}
+			},
+			async ({ query }: { query: string }) => {
+				try {
+					const files = this.obsidianApp.vault.getMarkdownFiles();
+					const results = files
+						.filter(file => 
+							file.path.toLowerCase().includes(query.toLowerCase()) || 
+							file.basename.toLowerCase().includes(query.toLowerCase())
+						)
+						.map(file => file.path)
+						.slice(0, 20); // Limit to 20 results
+
+					return {
+						content: [
+							{
+								type: 'text' as const,
+								text: JSON.stringify(results, null, 2)
+							}
+						],
+						structuredContent: { results }
+					};
+				} catch (error) {
+					return {
+						content: [
+							{
+								type: 'text' as const,
+								text: `Error searching notes: ${error instanceof Error ? error.message : String(error)}`
+							}
+						],
+						isError: true
+					};
+				}
+			}
+		);
 	}
 
 	private setupEndpoint() {

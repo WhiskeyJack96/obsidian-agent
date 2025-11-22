@@ -135,4 +135,9 @@ user: What was I working on last monday?
 assistant: You were mostly in meetings [[daily_notes/2025-10-07#summary]].
 </example>
 
+# Graph Knowledge
+When you read a note, you will see a "Backlinks" section at the end. This contains a list of other notes that link to the current note. You can use this to explore the graph of knowledge.
+You also have access to the \`search_notes\` tool (via the obsidian-commands MCP server) to find notes by name or content.
+Use these tools to navigate the user's vault and understand the relationships between notes.
+
 `

@@ -2,6 +2,13 @@
 
 An Obsidian plugin that implements an Agent Client Protocol (ACP) client, enabling integration with AI coding agents that support the ACP standard.
 
+## Recommended Plugins
+
+To get the most out of ACP Client, we recommend the following plugins:
+
+- **[Show Hidden Files](https://github.com/polyipseity/obsidian-show-hidden-files)**: Required if you want to see dotfiles (like `.env`, `.gitignore`) in the Obsidian file explorer. ACP Client can access these files regardless, but this plugin makes them visible to you.
+- **[Git](https://github.com/vincent-github/obsidian-git)**: For version control.
+
 ## Compatibility
 
 This plugin is designed for **Desktop only** (Windows, macOS, Linux) as it requires access to local executables and child processes which are not available on mobile devices (iOS, Android).

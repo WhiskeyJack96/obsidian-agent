@@ -14,7 +14,9 @@ Ideas:
     - [x] Focus input
     - [x] Approve/Reject tool
     - [x] Cancel current operation
-- [x] Investigate showing folders starting with . as a plugin feature (Support added for Agent to access them via Adapter fallback)
+- [x] Investigate showing folders starting with . as a plugin feature
+    - *Result*: Implementation requires extensive monkey-patching of private APIs (as seen in `obsidian-show-hidden-files`).
+    - *Decision*: Agent access is solved via adapter fallback. UI visibility should be handled by the dedicated `obsidian-show-hidden-files` plugin to avoid code duplication and fragility. Added recommendation to README.
 - [x] Remove git integration
 - [ ] Improve graph knowledge
     - [ ] Add backlinks to context when adding note

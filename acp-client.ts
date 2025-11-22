@@ -328,6 +328,11 @@ export class ACPClient {
 
 			const file = this.app.vault.getFileByPath(relativePath);
 			if (!file) {
+				// Try reading via adapter for hidden/dot files that aren't in the vault index
+				if (await this.app.vault.adapter.exists(relativePath)) {
+					const content = await this.app.vault.adapter.read(relativePath);
+					return { content };
+				}
 				throw new Error(`File not found: ${relativePath}`);
 			}
 
@@ -357,6 +362,9 @@ export class ACPClient {
 				if (file) {
 					// File exists, read current content
 					oldText = await this.app.vault.read(file);
+				} else if (await this.app.vault.adapter.exists(relativePath)) {
+					// File exists but likely hidden/dotfile, read from adapter
+					oldText = await this.app.vault.adapter.read(relativePath);
 				}
 
 				// Create diff data
@@ -393,7 +401,14 @@ export class ACPClient {
 			if (file) {
 				await this.app.vault.modify(file, contentToWrite);
 			} else {
-				await this.app.vault.create(relativePath, contentToWrite);
+				// Fallback to adapter.write if creation via vault fails (e.g. dotfiles)
+				try {
+					await this.app.vault.create(relativePath, contentToWrite);
+				} catch (err) {
+					// If normal create fails, try adapter write directly
+					// This handles cases like .gitignore where Obsidian might block it or path validation fails
+					await this.app.vault.adapter.write(relativePath, contentToWrite);
+				}
 			}
 
 			return {};

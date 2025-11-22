@@ -14,7 +14,7 @@ Ideas:
     - [x] Focus input
     - [x] Approve/Reject tool
     - [x] Cancel current operation
-- [ ] Investigate showing folders starting with . as a plugin feature
+- [x] Investigate showing folders starting with . as a plugin feature (Support added for Agent to access them via Adapter fallback)
 - [x] Remove git integration
 - [ ] Improve graph knowledge
     - [ ] Add backlinks to context when adding note

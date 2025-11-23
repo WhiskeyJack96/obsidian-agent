@@ -236,13 +236,16 @@ describe('ACPClient', () => {
         });
     });
 
-    describe('Terminal Handlers', () => {
+        describe('Terminal Handlers', () => {
         let mockProcess: any;
 
         beforeEach(() => {
             mockProcess = new EventEmitter();
             mockProcess.stdout = new EventEmitter();
             mockProcess.stderr = new EventEmitter();
+            mockProcess.stdin = new EventEmitter();
+            mockProcess.stdin.write = vi.fn();
+            mockProcess.stdin.end = vi.fn();
             mockProcess.kill = vi.fn();
             mockProcess.exitCode = null;
 
@@ -260,6 +263,16 @@ describe('ACPClient', () => {
             expect(typeof result.terminalId).toBe('string');
         });
 
+        it('should create a shell terminal if no args', async () => {
+            const result = await (client as any).handleTerminalCreate({
+                command: 'ls'
+            });
+
+            expect(mocks.spawn).toHaveBeenCalledWith('ls', [], expect.objectContaining({
+                shell: true
+            }));
+        });
+
         it('should capture terminal output', async () => {
             const { terminalId } = await (client as any).handleTerminalCreate({
                 command: 'echo',
@@ -275,8 +288,27 @@ describe('ACPClient', () => {
             expect(output.output).toBe('hello world');
         });
 
+        it('should capture terminal exit code', async () => {
+            const { terminalId } = await (client as any).handleTerminalCreate({
+                command: 'echo',
+                args: ['hello']
+            });
+
+            // Simulate exit
+            mockProcess.exitCode = 123;
+
+            const output = await (client as any).handleTerminalOutput({ terminalId });
+
+            expect(output.exitStatus).toEqual({ exitCode: 123 });
+        });
+
         it('should handle invalid terminal id', async () => {
             await expect((client as any).handleTerminalOutput({ terminalId: 'invalid' }))
+                .rejects.toThrow('Terminal not found');
+        });
+
+        it('should handle invalid terminal id in waitForExit', async () => {
+            await expect((client as any).handleTerminalWaitForExit({ terminalId: 'invalid' }))
                 .rejects.toThrow('Terminal not found');
         });
 
@@ -289,6 +321,20 @@ describe('ACPClient', () => {
             await (client as any).handleTerminalKill({ terminalId });
 
             expect(mockProcess.kill).toHaveBeenCalled();
+        });
+
+        it('should release terminal', async () => {
+            const { terminalId } = await (client as any).handleTerminalCreate({
+                command: 'sleep',
+                args: ['10']
+            });
+
+            await (client as any).handleTerminalRelease({ terminalId });
+
+            expect(mockProcess.kill).toHaveBeenCalled();
+            // Should fail now as it's deleted
+            await expect((client as any).handleTerminalOutput({ terminalId }))
+                .rejects.toThrow('Terminal not found');
         });
 
         it('should wait for terminal exit', async () => {
@@ -335,6 +381,202 @@ describe('ACPClient', () => {
             });
             
             expect(result).toEqual({ outcome: { outcome: 'cancelled' } });
+        });
+    });
+
+    describe('Edge Cases', () => {
+        describe('File Operations', () => {
+            it('should fallback to adapter write if create fails', async () => {
+                vi.spyOn(app.vault, 'getFileByPath').mockReturnValue(null);
+                // Force vault.create to fail
+                vi.spyOn(app.vault, 'create').mockRejectedValue(new Error('Vault create failed'));
+                vi.spyOn(app.vault.adapter, 'write').mockResolvedValue(undefined);
+
+                await (client as any).handleWriteTextFile({
+                    path: '/vault/root/.gitignore',
+                    content: 'node_modules'
+                });
+
+                expect(app.vault.create).toHaveBeenCalled();
+                expect(app.vault.adapter.write).toHaveBeenCalledWith('.gitignore', 'node_modules');
+            });
+
+            it('should throw if user rejects diff', async () => {
+                mockSettings.autoApproveWritePermission = false;
+                const mockFile = new TFile();
+                mockFile.path = 'test.md';
+                
+                vi.spyOn(app.vault, 'getFileByPath').mockReturnValue(mockFile);
+                vi.spyOn(app.vault, 'read').mockResolvedValue('old');
+                
+                mockPlugin.openDiffView.mockResolvedValue({
+                    setDiffData: (data: any, resolve: any) => {
+                        resolve({ approved: false });
+                    }
+                });
+
+                await expect((client as any).handleWriteTextFile({
+                    path: '/vault/root/test.md',
+                    content: 'new'
+                })).rejects.toThrow('User rejected the file write');
+            });
+        });
+
+        describe('Capabilities', () => {
+            it('should not support loadSession if agent capability missing', async () => {
+                const mockProcess = new EventEmitter();
+                (mockProcess as any).stdout = new EventEmitter();
+                (mockProcess as any).stderr = new EventEmitter();
+                (mockProcess as any).stdin = new EventEmitter();
+                (mockProcess as any).stdin.write = vi.fn();
+                (mockProcess as any).stdin.end = vi.fn();
+                mocks.spawn.mockReturnValue(mockProcess);
+
+                const mockConnection = {
+                    initialize: vi.fn().mockResolvedValue({ agentCapabilities: { loadSession: false } }),
+                    newSession: vi.fn(),
+                    loadSession: vi.fn()
+                };
+                mocks.ClientSideConnection.mockImplementation(function() { return mockConnection; });
+                mocks.ndJsonStream.mockReturnValue({});
+                
+                await client.initialize();
+                
+                expect(client.supportsLoadSession()).toBe(false);
+                await expect(client.loadSession('sess-1')).rejects.toThrow('Agent does not support loading sessions');
+            });
+        });
+
+        describe('Configuration', () => {
+            it('should pass system prompt if configured', async () => {
+                const mockProcess = new EventEmitter();
+                (mockProcess as any).stdout = new EventEmitter();
+                (mockProcess as any).stderr = new EventEmitter();
+                (mockProcess as any).stdin = new EventEmitter();
+                (mockProcess as any).stdin.write = vi.fn();
+                (mockProcess as any).stdin.end = vi.fn();
+                mocks.spawn.mockReturnValue(mockProcess);
+
+                mockSettings.obsidianFocussedPrompt = true;
+                const mockConnection = {
+                    initialize: vi.fn().mockResolvedValue({}),
+                    newSession: vi.fn().mockResolvedValue({ sessionId: 'sess-1' })
+                };
+                mocks.ClientSideConnection.mockImplementation(function() { return mockConnection; });
+                mocks.ndJsonStream.mockReturnValue({});
+                
+                await client.initialize();
+                await client.createSession();
+                
+                expect(mockConnection.newSession).toHaveBeenCalledWith(expect.objectContaining({
+                    _meta: expect.objectContaining({
+                        systemPrompt: expect.any(String)
+                    })
+                }));
+            });
+
+            it('should configure MCP servers if enabled', async () => {
+                const mockProcess = new EventEmitter();
+                (mockProcess as any).stdout = new EventEmitter();
+                (mockProcess as any).stderr = new EventEmitter();
+                (mockProcess as any).stdin = new EventEmitter();
+                (mockProcess as any).stdin.write = vi.fn();
+                (mockProcess as any).stdin.end = vi.fn();
+                mocks.spawn.mockReturnValue(mockProcess);
+
+                mockSettings.enableMCPServer = true;
+                mockSettings.mcpServerPort = 4000;
+                
+                const mockConnection = {
+                    initialize: vi.fn().mockResolvedValue({}),
+                    newSession: vi.fn().mockResolvedValue({ sessionId: 'sess-1' })
+                };
+                mocks.ClientSideConnection.mockImplementation(function() { return mockConnection; });
+                mocks.ndJsonStream.mockReturnValue({});
+                
+                await client.initialize();
+                await client.createSession();
+                
+                expect(mockConnection.newSession).toHaveBeenCalledWith(expect.objectContaining({
+                    mcpServers: expect.arrayContaining([
+                        expect.objectContaining({
+                            type: 'http',
+                            name: 'obsidian-commands',
+                            url: 'http://localhost:4000/mcp'
+                        })
+                    ])
+                }));
+            });
+        });
+
+        describe('Process Errors', () => {
+            it('should handle process error', async () => {
+                const mockProcess = new EventEmitter();
+                (mockProcess as any).stdout = new EventEmitter();
+                (mockProcess as any).stderr = new EventEmitter();
+                (mockProcess as any).stdin = new EventEmitter();
+                (mockProcess as any).stdin.write = vi.fn();
+                (mockProcess as any).stdin.end = vi.fn();
+                mocks.spawn.mockReturnValue(mockProcess);
+                
+                const mockConnection = {
+                    initialize: vi.fn().mockResolvedValue({}),
+                };
+                mocks.ClientSideConnection.mockImplementation(function() { return mockConnection; });
+                mocks.ndJsonStream.mockReturnValue({});
+                
+                // Spy on console.error
+                const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+                
+                await client.initialize();
+                
+                mockProcess.emit('error', new Error('Process failed'));
+                
+                expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Agent process error'), expect.any(Error));
+            });
+
+            it('should handle unexpected exit', async () => {
+                const mockProcess = new EventEmitter();
+                (mockProcess as any).stdout = new EventEmitter();
+                (mockProcess as any).stderr = new EventEmitter();
+                (mockProcess as any).stdin = new EventEmitter();
+                (mockProcess as any).stdin.write = vi.fn();
+                (mockProcess as any).stdin.end = vi.fn();
+                // Make removeAllListeners actually work to prevent infinite loops
+                const originalRemoveAllListeners = mockProcess.removeAllListeners.bind(mockProcess);
+                (mockProcess as any).removeAllListeners = vi.fn((event?: string) => {
+                    return originalRemoveAllListeners(event);
+                });
+                // Make kill() emit exit event to simulate real process behavior
+                (mockProcess as any).kill = vi.fn(() => {
+                    mockProcess.emit('exit', 0);
+                });
+
+                mocks.spawn.mockReturnValue(mockProcess);
+
+                const mockConnection = {
+                    initialize: vi.fn().mockResolvedValue({}),
+                };
+                mocks.ClientSideConnection.mockImplementation(function() { return mockConnection; });
+                mocks.ndJsonStream.mockReturnValue({});
+
+                await client.initialize();
+                (client as any).sessionId = 'sess-1';
+
+                // Spy on cleanup
+                const cleanupSpy = vi.spyOn(client, 'cleanup');
+
+                // Simulate unexpected exit
+                mockProcess.emit('exit', 1);
+
+                // Wait for async cleanup
+                await new Promise(resolve => setTimeout(resolve, 0));
+
+                // Should trigger cleanup
+                expect(cleanupSpy).toHaveBeenCalled();
+                expect(mockPlugin.triggerManager.clearTurnWrites).toHaveBeenCalled();
+                expect(client.getSessionId()).toBeNull();
+            });
         });
     });
 

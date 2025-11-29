@@ -1,10 +1,13 @@
-import { TFile, Vault, Notice } from 'obsidian';
-import { TriggerConfig } from './settings';
+import { TFile, Vault, Notice, MetadataCache } from 'obsidian';
 import type ACPClientPlugin from './main';
+
+const AUDIO_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.webm', '.ogg', '.flac'];
+const DEFAULT_AUDIO_PROMPT = 'Transcribe this audio and create a new note with the transcription';
 
 export class TriggerManager {
 	private plugin: ACPClientPlugin;
 	private vault: Vault;
+	private metadataCache: MetadataCache;
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 	// Per-session tracking: sessionId → Set<filePath>
 	private turnWrittenFiles: Map<string, Set<string>> = new Map();
@@ -43,6 +46,7 @@ export class TriggerManager {
 	constructor(plugin: ACPClientPlugin) {
 		this.plugin = plugin;
 		this.vault = plugin.app.vault;
+		this.metadataCache = plugin.app.metadataCache;
 	}
 
 	/**
@@ -71,79 +75,111 @@ export class TriggerManager {
 	private async handleVaultEvent(file: TFile, event: 'created' | 'modified') {
 		const filePath = file.path;
 
+		// Skip if metadata triggers are disabled
+		if (!this.plugin.settings.enableMetadataTriggers) {
+			return;
+		}
+
 		// Skip if this file was written by an agent during any active turn
 		if (this.isFileTracked(filePath)) {
 			return;
 		}
 
-		// Find matching triggers
-		const matchingTriggers = this.plugin.settings.triggers.filter(trigger => {
-			if (!trigger.enabled) {
-				return false;
-			}
+		// Check if file has acp-trigger metadata set to true
+		const cache = this.metadataCache.getFileCache(file);
+		const shouldTrigger = cache?.frontmatter?.['acp-trigger'] === true;
 
-			// "." means all notes
-			if (trigger.folder === '.') {
-				return true;
-			}
-
-			// Otherwise check if file is in the trigger folder
-			return filePath.startsWith(trigger.folder);
-		});
-
-		if (matchingTriggers.length === 0) {
+		if (!shouldTrigger) {
 			return;
 		}
 
-		// Process each matching trigger with debouncing
-		for (const trigger of matchingTriggers) {
-			this.debounceTrigger(trigger, file, event);
-		}
+		// Debounce trigger execution
+		this.debounceTrigger(file, event);
 	}
 
 	/**
 	 * Debounce trigger execution per file path
 	 */
-	private debounceTrigger(trigger: TriggerConfig, file: TFile, event: 'created' | 'modified') {
-		const debounceKey = `${trigger.id}:${file.path}`;
+	private debounceTrigger(file: TFile, event: 'created' | 'modified') {
+		const debounceKey = file.path;
 
-		// Clear existing timer for this trigger+file combination
+		// Clear existing timer for this file
 		if (this.debounceTimers.has(debounceKey)) {
 			clearTimeout(this.debounceTimers.get(debounceKey)!);
 		}
 
 		// Set new timer
 		const timer = setTimeout(() => {
-			this.executeTrigger(trigger, file, event);
+			this.executeTrigger(file, event);
 			this.debounceTimers.delete(debounceKey);
-		}, trigger.debounceMs);
+		}, this.plugin.settings.metadataTriggerDebounceMs);
 
 		this.debounceTimers.set(debounceKey, timer);
 	}
 
 	/**
-	 * Execute a trigger: read file content, replace placeholders, spawn agent
+	 * Execute a trigger: read metadata, set acp-trigger to false, spawn agent
 	 */
-	private async executeTrigger(trigger: TriggerConfig, file: TFile, event: 'created' | 'modified') {
+	private async executeTrigger(file: TFile, event: 'created' | 'modified') {
 		try {
-			// Read file content
+			// Read file content to get frontmatter
 			const content = await this.vault.read(file);
+			const cache = this.metadataCache.getFileCache(file);
 
-			// Replace placeholders in prompt template
-			const prompt = trigger.prompt
-				.replace(/{file}/g, file.path)
-				.replace(/{event}/g, event)
-				.replace(/{content}/g, content);
+			// Get custom prompt from frontmatter, or use default for audio
+			let prompt = cache?.frontmatter?.['acp-prompt'] as string | undefined;
+			const isAudio = this.isAudioFile(file);
 
-			// Show notice to user
-			new Notice(`Trigger activated: ${trigger.folder} (${event})`);
+			if (!prompt) {
+				if (isAudio) {
+					prompt = DEFAULT_AUDIO_PROMPT;
+				} else {
+					// For non-audio files without custom prompt, just mention the file
+					prompt = `Process the file: ${file.path}`;
+				}
+			}
 
-			// Spawn new agent view with the generated prompt
-			await this.plugin.activateView(prompt);
+			// Set acp-trigger to false BEFORE spawning agent to prevent race conditions
+			await this.disableTrigger(file, content);
+
+			// Add file context to prompt
+			const fullPrompt = `${prompt}\n\nFile: ${file.path}`;
+
+			// For audio files, we need to handle differently
+			if (isAudio) {
+				// Spawn agent view with audio file context
+				await this.plugin.activateView(fullPrompt, file);
+			} else {
+				// Spawn agent view with text prompt only
+				await this.plugin.activateView(fullPrompt);
+			}
 
 		} catch (error) {
 			console.error('Error executing trigger:', error);
 			new Notice(`Failed to execute trigger: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Check if file is an audio file based on extension
+	 */
+	private isAudioFile(file: TFile): boolean {
+		return AUDIO_EXTENSIONS.some(ext => file.path.toLowerCase().endsWith(ext));
+	}
+
+	/**
+	 * Disable trigger by setting acp-trigger to false in frontmatter
+	 */
+	private async disableTrigger(file: TFile, content: string): Promise<void> {
+		// Use regex to replace acp-trigger: true with acp-trigger: false
+		// This handles both with and without quotes
+		const updatedContent = content.replace(
+			/^(\s*acp-trigger\s*:\s*)(true|"true"|'true')/m,
+			'$1false'
+		);
+
+		if (updatedContent !== content) {
+			await this.vault.modify(file, updatedContent);
 		}
 	}
 

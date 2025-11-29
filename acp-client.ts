@@ -237,17 +237,33 @@ export class ACPClient {
 		throw Error("could not get vault path")
 	}
 
-	async sendPrompt(prompt: string): Promise<void> {
+	async sendPrompt(prompt: string, audioFile?: TFile): Promise<void> {
 		if (!this.connection || !this.sessionId) {
 			throw new Error('No active session');
 		}
 
+		// Build content blocks array
+		const contentBlocks: schema.ContentBlock[] = [];
+
+		// Add audio block if audio file is provided
+		if (audioFile) {
+			const audioData = await this.readAudioFile(audioFile);
+			contentBlocks.push({
+				type: 'audio',
+				mimeType: this.getMimeType(audioFile),
+				data: audioData
+			});
+		}
+
+		// Add text prompt
+		contentBlocks.push({
+			type: 'text',
+			text: prompt
+		});
+
 		const response = await this.connection.prompt({
 			sessionId: this.sessionId,
-			prompt: [{
-				type: 'text',
-				text: prompt
-			}]
+			prompt: contentBlocks
 		});
 
 		// Clear tracked writes for this session now that the turn is complete
@@ -262,6 +278,36 @@ export class ACPClient {
 				data: response
 			});
 		}
+	}
+
+	/**
+	 * Read audio file and return base64-encoded data
+	 */
+	private async readAudioFile(file: TFile): Promise<string> {
+		const arrayBuffer = await this.app.vault.readBinary(file);
+		const uint8Array = new Uint8Array(arrayBuffer);
+		// Convert to base64
+		let binary = '';
+		for (let i = 0; i < uint8Array.byteLength; i++) {
+			binary += String.fromCharCode(uint8Array[i]);
+		}
+		return btoa(binary);
+	}
+
+	/**
+	 * Get MIME type based on file extension
+	 */
+	private getMimeType(file: TFile): string {
+		const extension = file.extension.toLowerCase();
+		const mimeTypes: Record<string, string> = {
+			'mp3': 'audio/mpeg',
+			'm4a': 'audio/mp4',
+			'wav': 'audio/wav',
+			'webm': 'audio/webm',
+			'ogg': 'audio/ogg',
+			'flac': 'audio/flac'
+		};
+		return mimeTypes[extension] || 'audio/mpeg';
 	}
 
 	async cancelSession(): Promise<void> {

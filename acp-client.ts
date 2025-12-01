@@ -95,7 +95,8 @@ export class ACPClient {
 		});
 
 		// Create the stream using ndJsonStream
-		const stream = ndJsonStream(webOutputStream, webInputStream);
+		// Type cast needed due to minor incompatibility between @types/node v20 Web Streams and ACP SDK types
+		const stream = ndJsonStream(webOutputStream as any, webInputStream as any);
 
 		// Create ClientSideConnection with proper signature
 		this.connection = new ClientSideConnection(

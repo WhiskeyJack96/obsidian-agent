@@ -91,6 +91,41 @@ export class App {
   }
 }
 
-export class FileSystemAdapter {
-    getBasePath() { return ""; }
+export interface DataAdapter {
+    getName(): string;
+    exists(normalizedPath: string, sensitive?: boolean): Promise<boolean>;
+    stat(normalizedPath: string): Promise<any | null>;
+    list(normalizedPath: string): Promise<any>;
+    read(normalizedPath: string): Promise<string>;
+    write(normalizedPath: string, data: string): Promise<void>;
+}
+
+export class FileSystemAdapter implements DataAdapter {
+    getName(): string {
+        return "FileSystemAdapter";
+    }
+
+    getBasePath(): string {
+        return "";
+    }
+
+    exists(normalizedPath: string, sensitive?: boolean): Promise<boolean> {
+        return Promise.resolve(false);
+    }
+
+    stat(normalizedPath: string): Promise<any | null> {
+        return Promise.resolve(null);
+    }
+
+    list(normalizedPath: string): Promise<any> {
+        return Promise.resolve({ files: [], folders: [] });
+    }
+
+    read(normalizedPath: string): Promise<string> {
+        return Promise.resolve("");
+    }
+
+    write(normalizedPath: string, data: string): Promise<void> {
+        return Promise.resolve();
+    }
 }

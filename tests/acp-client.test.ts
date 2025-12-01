@@ -60,7 +60,7 @@ describe('ACPClient', () => {
         client = new ACPClient(app, mockSettings, mockPlugin);
         
         // Mock getVaultPath (private method, but we can mock the adapter)
-        vi.spyOn(app.vault.adapter, 'getBasePath').mockReturnValue('/vault/root');
+        vi.spyOn(app.vault.adapter as any, 'getBasePath').mockReturnValue('/vault/root');
 
         // Reset mocks
         mocks.spawn.mockReset();

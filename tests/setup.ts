@@ -16,10 +16,18 @@ if (typeof HTMLElement !== 'undefined') {
         return div;
     };
 
-    HTMLElement.prototype.createEl = function(tag: string, params?: any) {
+    HTMLElement.prototype.createEl = function<K extends keyof HTMLElementTagNameMap>(
+        tag: K,
+        o?: string | { cls?: string | string[]; text?: string; value?: string; },
+        callback?: (el: HTMLElementTagNameMap[K]) => void
+    ): HTMLElementTagNameMap[K] {
         const el = document.createElement(tag);
+
+        // Handle o parameter (can be string for class or object)
+        const params = typeof o === 'string' ? { cls: o } : o;
+
         if (params?.cls) {
-             if (Array.isArray(params.cls)) {
+            if (Array.isArray(params.cls)) {
                 el.classList.add(...params.cls);
             } else {
                 el.classList.add(params.cls);
@@ -28,7 +36,10 @@ if (typeof HTMLElement !== 'undefined') {
         if (params?.text) el.textContent = params.text;
         if (params?.value) (el as any).value = params.value;
         this.appendChild(el);
-        return el;
+
+        if (callback) callback(el as HTMLElementTagNameMap[K]);
+
+        return el as HTMLElementTagNameMap[K];
     };
 
     HTMLElement.prototype.empty = function() {

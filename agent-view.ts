@@ -247,7 +247,7 @@ export class AgentView extends ItemView {
 		this.initialPrompt = null; // Clear to prevent duplicate sends
 
 		// Show a visual indicator that this was triggered
-		this.addMessage('system', '🤖 Triggered by vault event');
+		this.addMessage('system', '🤖 Triggered by metadata');
 
 		// Add user message and send to agent
 		this.addMessage('user', prompt);

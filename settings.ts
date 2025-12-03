@@ -1,11 +1,3 @@
-export interface TriggerConfig {
-	id: string;
-	folder: string;              // Folder path prefix to watch (e.g., "conversations/")
-	prompt: string;              // Prompt template with placeholders: {file}, {event}, {content}
-	enabled: boolean;
-	debounceMs: number;          // Debounce delay in milliseconds (default: 3000)
-}
-
 export interface ACPClientSettings {
 	agentCommand: string;
 	agentArgs: string[];
@@ -16,7 +8,8 @@ export interface ACPClientSettings {
 	defaultViewType: 'right-sidebar' | 'left-sidebar' | 'tab' | 'split';
 	enableConversationTracking: boolean;
 	conversationTrackingFolder: string;
-	triggers: TriggerConfig[];
+	enableMetadataTriggers: boolean;
+	metadataTriggerDebounceMs: number;
 }
 
 export const DEFAULT_SETTINGS: ACPClientSettings = {
@@ -29,5 +22,6 @@ export const DEFAULT_SETTINGS: ACPClientSettings = {
 	defaultViewType: 'right-sidebar',
 	enableConversationTracking: false,
 	conversationTrackingFolder: 'conversations/',
-	triggers: []
+	enableMetadataTriggers: true,
+	metadataTriggerDebounceMs: 3000
 };

@@ -1,10 +1,10 @@
-import { TFile, Vault, Notice } from 'obsidian';
-import { TriggerConfig } from './settings';
+import { TFile, Vault, Notice, MetadataCache } from 'obsidian';
 import type ACPClientPlugin from './main';
 
 export class TriggerManager {
 	private plugin: ACPClientPlugin;
 	private vault: Vault;
+	private metadataCache: MetadataCache;
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 	// Per-session tracking: sessionId → Set<filePath>
 	private turnWrittenFiles: Map<string, Set<string>> = new Map();
@@ -43,6 +43,7 @@ export class TriggerManager {
 	constructor(plugin: ACPClientPlugin) {
 		this.plugin = plugin;
 		this.vault = plugin.app.vault;
+		this.metadataCache = plugin.app.metadataCache;
 	}
 
 	/**
@@ -71,79 +72,93 @@ export class TriggerManager {
 	private async handleVaultEvent(file: TFile, event: 'created' | 'modified') {
 		const filePath = file.path;
 
+		// Skip if metadata triggers are disabled
+		if (!this.plugin.settings.enableMetadataTriggers) {
+			return;
+		}
+
 		// Skip if this file was written by an agent during any active turn
 		if (this.isFileTracked(filePath)) {
 			return;
 		}
 
-		// Find matching triggers
-		const matchingTriggers = this.plugin.settings.triggers.filter(trigger => {
-			if (!trigger.enabled) {
-				return false;
-			}
+		// Check if file has acp-trigger metadata set to true
+		const cache = this.metadataCache.getFileCache(file);
+		const shouldTrigger = cache?.frontmatter?.['acp-trigger'] === true;
 
-			// "." means all notes
-			if (trigger.folder === '.') {
-				return true;
-			}
-
-			// Otherwise check if file is in the trigger folder
-			return filePath.startsWith(trigger.folder);
-		});
-
-		if (matchingTriggers.length === 0) {
+		if (!shouldTrigger) {
 			return;
 		}
 
-		// Process each matching trigger with debouncing
-		for (const trigger of matchingTriggers) {
-			this.debounceTrigger(trigger, file, event);
-		}
+		// Debounce trigger execution
+		this.debounceTrigger(file, event);
 	}
 
 	/**
 	 * Debounce trigger execution per file path
 	 */
-	private debounceTrigger(trigger: TriggerConfig, file: TFile, event: 'created' | 'modified') {
-		const debounceKey = `${trigger.id}:${file.path}`;
+	private debounceTrigger(file: TFile, event: 'created' | 'modified') {
+		const debounceKey = file.path;
 
-		// Clear existing timer for this trigger+file combination
+		// Clear existing timer for this file
 		if (this.debounceTimers.has(debounceKey)) {
 			clearTimeout(this.debounceTimers.get(debounceKey)!);
 		}
 
 		// Set new timer
 		const timer = setTimeout(() => {
-			this.executeTrigger(trigger, file, event);
+			this.executeTrigger(file, event);
 			this.debounceTimers.delete(debounceKey);
-		}, trigger.debounceMs);
+		}, this.plugin.settings.metadataTriggerDebounceMs);
 
 		this.debounceTimers.set(debounceKey, timer);
 	}
 
 	/**
-	 * Execute a trigger: read file content, replace placeholders, spawn agent
+	 * Execute a trigger: read metadata, set acp-trigger to false, spawn agent
 	 */
-	private async executeTrigger(trigger: TriggerConfig, file: TFile, event: 'created' | 'modified') {
+	private async executeTrigger(file: TFile, event: 'created' | 'modified') {
 		try {
-			// Read file content
-			const content = await this.vault.read(file);
+			const cache = this.metadataCache.getFileCache(file);
 
-			// Replace placeholders in prompt template
-			const prompt = trigger.prompt
-				.replace(/{file}/g, file.path)
-				.replace(/{event}/g, event)
-				.replace(/{content}/g, content);
+			// Get custom prompt from frontmatter
+			let prompt = cache?.frontmatter?.['acp-prompt'] as string | undefined;
 
-			// Show notice to user
-			new Notice(`Trigger activated: ${trigger.folder} (${event})`);
+			if (!prompt) {
+				prompt = `Process the file: ${file.path}`;
+			}
 
-			// Spawn new agent view with the generated prompt
-			await this.plugin.activateView(prompt);
+			// Set acp-trigger to false BEFORE spawning agent to prevent race conditions
+			await this.disableTrigger(file);
+
+			// Add file context to prompt
+			const fullPrompt = `${prompt}\n\nFile: ${file.path}`;
+
+			// Spawn agent view
+			await this.plugin.activateView(fullPrompt);
 
 		} catch (error) {
 			console.error('Error executing trigger:', error);
 			new Notice(`Failed to execute trigger: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Disable trigger by setting acp-trigger to false in frontmatter
+	 */
+	private async disableTrigger(file: TFile): Promise<void> {
+		try {
+			await this.plugin.app.fileManager.processFrontMatter(file, (frontmatter) => {
+				frontmatter['acp-trigger'] = false;
+			});
+		} catch (error) {
+			// Handle malformed YAML gracefully
+			if (error.name === 'YAMLParseError') {
+				console.error('Failed to parse frontmatter for trigger disable:', error);
+				new Notice(`Could not disable trigger for ${file.path}: Invalid YAML format`);
+				throw error;
+			}
+			throw error;
 		}
 	}
 

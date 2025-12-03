@@ -157,7 +157,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		const triggersHeader = containerEl.createEl('h4', { text: 'Metadata-Based Triggers', cls: 'acp-alpha-section-header' });
 
 		const triggersDesc = containerEl.createDiv({ cls: 'acp-info-text-bottom-margin setting-item-description' });
-		triggersDesc.setText('Automatically trigger agent sessions when files have acp-trigger: true in their frontmatter. Supports audio transcription for audio files (.mp3, .m4a, .wav, etc.)');
+		triggersDesc.setText('Automatically trigger agent sessions when files have acp-trigger: true in their frontmatter');
 
 		// Enable metadata triggers toggle
 		new Setting(containerEl)
@@ -194,7 +194,6 @@ export class ACPClientSettingTab extends PluginSettingTab {
 			acp-trigger: true<br>
 			acp-prompt: "Your custom prompt here"<br>
 			---</code><br><br>
-			For audio files, omit acp-prompt to use default transcription prompt.<br>
 			The trigger field will be automatically set to false after activation.
 		`;
 		usageInfo.style.fontFamily = 'monospace';

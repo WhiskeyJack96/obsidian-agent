@@ -49,7 +49,6 @@ export class AgentView extends ItemView {
 	private connectionState: ConnectionState = ConnectionState.NOT_CONNECTED;
 	private messageRenderer: MessageRenderer;
 	private initialPrompt: string | null = null;
-	private initialAudioFile: TFile | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: ACPClientPlugin) {
 		super(leaf);
@@ -231,9 +230,8 @@ export class AgentView extends ItemView {
 	}
 
 
-	setInitialPrompt(prompt: string, audioFile?: TFile): void {
+	setInitialPrompt(prompt: string): void {
 		this.initialPrompt = prompt;
-		this.initialAudioFile = audioFile || null;
 		// If already connected, send immediately
 		if (this.connectionState === ConnectionState.SESSION_ACTIVE) {
 			this.sendInitialPrompt();
@@ -246,9 +244,7 @@ export class AgentView extends ItemView {
 		}
 
 		const prompt = this.initialPrompt;
-		const audioFile = this.initialAudioFile;
 		this.initialPrompt = null; // Clear to prevent duplicate sends
-		this.initialAudioFile = null;
 
 		// Show a visual indicator that this was triggered
 		this.addMessage('system', '🤖 Triggered by metadata');
@@ -258,7 +254,7 @@ export class AgentView extends ItemView {
 		this.startAgentTurn();
 
 		try {
-			await this.client.sendPrompt(prompt, audioFile);
+			await this.client.sendPrompt(prompt);
 		} catch (err) {
 			new Notice(`Failed to send triggered message: ${err.message}`);
 			console.error('Send error:', err);

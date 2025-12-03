@@ -1,9 +1,6 @@
 import { TFile, Vault, Notice, MetadataCache } from 'obsidian';
 import type ACPClientPlugin from './main';
 
-const AUDIO_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.webm', '.ogg', '.flac'];
-const DEFAULT_AUDIO_PROMPT = 'Transcribe this audio and create a new note with the transcription';
-
 export class TriggerManager {
 	private plugin: ACPClientPlugin;
 	private vault: Vault;
@@ -122,37 +119,23 @@ export class TriggerManager {
 	 */
 	private async executeTrigger(file: TFile, event: 'created' | 'modified') {
 		try {
-			// Read file content to get frontmatter
-			const content = await this.vault.read(file);
 			const cache = this.metadataCache.getFileCache(file);
 
-			// Get custom prompt from frontmatter, or use default for audio
+			// Get custom prompt from frontmatter
 			let prompt = cache?.frontmatter?.['acp-prompt'] as string | undefined;
-			const isAudio = this.isAudioFile(file);
 
 			if (!prompt) {
-				if (isAudio) {
-					prompt = DEFAULT_AUDIO_PROMPT;
-				} else {
-					// For non-audio files without custom prompt, just mention the file
-					prompt = `Process the file: ${file.path}`;
-				}
+				prompt = `Process the file: ${file.path}`;
 			}
 
 			// Set acp-trigger to false BEFORE spawning agent to prevent race conditions
-			await this.disableTrigger(file, content);
+			await this.disableTrigger(file);
 
 			// Add file context to prompt
 			const fullPrompt = `${prompt}\n\nFile: ${file.path}`;
 
-			// For audio files, we need to handle differently
-			if (isAudio) {
-				// Spawn agent view with audio file context
-				await this.plugin.activateView(fullPrompt, file);
-			} else {
-				// Spawn agent view with text prompt only
-				await this.plugin.activateView(fullPrompt);
-			}
+			// Spawn agent view
+			await this.plugin.activateView(fullPrompt);
 
 		} catch (error) {
 			console.error('Error executing trigger:', error);
@@ -161,25 +144,21 @@ export class TriggerManager {
 	}
 
 	/**
-	 * Check if file is an audio file based on extension
-	 */
-	private isAudioFile(file: TFile): boolean {
-		return AUDIO_EXTENSIONS.some(ext => file.path.toLowerCase().endsWith(ext));
-	}
-
-	/**
 	 * Disable trigger by setting acp-trigger to false in frontmatter
 	 */
-	private async disableTrigger(file: TFile, content: string): Promise<void> {
-		// Use regex to replace acp-trigger: true with acp-trigger: false
-		// This handles both with and without quotes
-		const updatedContent = content.replace(
-			/^(\s*acp-trigger\s*:\s*)(true|"true"|'true')/m,
-			'$1false'
-		);
-
-		if (updatedContent !== content) {
-			await this.vault.modify(file, updatedContent);
+	private async disableTrigger(file: TFile): Promise<void> {
+		try {
+			await this.plugin.app.fileManager.processFrontMatter(file, (frontmatter) => {
+				frontmatter['acp-trigger'] = false;
+			});
+		} catch (error) {
+			// Handle malformed YAML gracefully
+			if (error.name === 'YAMLParseError') {
+				console.error('Failed to parse frontmatter for trigger disable:', error);
+				new Notice(`Could not disable trigger for ${file.path}: Invalid YAML format`);
+				throw error;
+			}
+			throw error;
 		}
 	}
 

@@ -195,7 +195,7 @@ export default class ACPClientPlugin extends Plugin {
 		}
 	}
 
-	async activateView(initialPrompt?: string, audioFile?: import('obsidian').TFile) {
+	async activateView(initialPrompt?: string) {
 		const { workspace } = this.app;
 		let leaf: WorkspaceLeaf | null = null;
 		const viewType = this.settings.defaultViewType;
@@ -225,7 +225,7 @@ export default class ACPClientPlugin extends Plugin {
 			if (initialPrompt) {
 				const view = leaf.view as AgentView;
 				if (view && typeof view.setInitialPrompt === 'function') {
-					view.setInitialPrompt(initialPrompt, audioFile);
+					view.setInitialPrompt(initialPrompt);
 				}
 			}
 		}

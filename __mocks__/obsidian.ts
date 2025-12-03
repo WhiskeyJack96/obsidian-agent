@@ -70,13 +70,35 @@ export class Plugin {
   saveData(data: any): Promise<void> { return Promise.resolve(); }
 }
 
+export class MetadataCache {
+  getFileCache(file: TFile): any {
+    return null; // Will be mocked in tests
+  }
+
+  getBacklinksForFile(): any {
+    return null;
+  }
+}
+
+export class FileManager {
+  async processFrontMatter(
+    file: TFile,
+    callback: (frontmatter: any) => void
+  ): Promise<void> {
+    // Will be mocked in tests
+  }
+}
+
 export class App {
   vault: Vault;
   workspace: any;
-  metadataCache: any;
-  
+  metadataCache: MetadataCache;
+  fileManager: FileManager;
+
   constructor() {
     this.vault = new Vault();
+    this.metadataCache = new MetadataCache();
+    this.fileManager = new FileManager();
     this.workspace = {
         getLeavesOfType: () => [],
         detachLeavesOfType: () => {},
@@ -84,9 +106,6 @@ export class App {
             setViewState: async () => {}
         }),
         getActiveFile: () => null
-    };
-    this.metadataCache = {
-        getBacklinksForFile: () => null
     };
   }
 }

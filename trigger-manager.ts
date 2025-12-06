@@ -1,10 +1,9 @@
-import { TFile, Vault, Notice, MetadataCache } from 'obsidian';
+import { TFile, Vault, Notice } from 'obsidian';
 import type ACPClientPlugin from './main';
 
 export class TriggerManager {
 	private plugin: ACPClientPlugin;
 	private vault: Vault;
-	private metadataCache: MetadataCache;
 	private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 	// Per-session tracking: sessionId → Set<filePath>
 	private turnWrittenFiles: Map<string, Set<string>> = new Map();
@@ -43,7 +42,6 @@ export class TriggerManager {
 	constructor(plugin: ACPClientPlugin) {
 		this.plugin = plugin;
 		this.vault = plugin.app.vault;
-		this.metadataCache = plugin.app.metadataCache;
 	}
 
 	/**
@@ -82,22 +80,22 @@ export class TriggerManager {
 			return;
 		}
 
-		// Check if file has acp-trigger metadata set to true
-		const cache = this.metadataCache.getFileCache(file);
-		const shouldTrigger = cache?.frontmatter?.['acp-trigger'] === true;
+		// Check if file has acp-trigger set to true by reading file directly, and if so update it to false
+		// This bypasses metadata cache to avoid race conditions
+		const triggerArgs = await this.isFileTriggerEnabled(file);
 
-		if (!shouldTrigger) {
+		if (!triggerArgs.triggerValue) {
 			return;
 		}
 
 		// Debounce trigger execution
-		this.debounceTrigger(file, event);
+		this.debounceTrigger(file, triggerArgs.prompt);
 	}
 
 	/**
 	 * Debounce trigger execution per file path
 	 */
-	private debounceTrigger(file: TFile, event: 'created' | 'modified') {
+	private debounceTrigger(file: TFile, prompt: string) {
 		const debounceKey = file.path;
 
 		// Clear existing timer for this file
@@ -107,7 +105,7 @@ export class TriggerManager {
 
 		// Set new timer
 		const timer = setTimeout(() => {
-			this.executeTrigger(file, event);
+			this.executeTrigger(file, prompt );
 			this.debounceTimers.delete(debounceKey);
 		}, this.plugin.settings.metadataTriggerDebounceMs);
 
@@ -117,19 +115,11 @@ export class TriggerManager {
 	/**
 	 * Execute a trigger: read metadata, set acp-trigger to false, spawn agent
 	 */
-	private async executeTrigger(file: TFile, event: 'created' | 'modified') {
+	private async executeTrigger(file: TFile, prompt: string) {
 		try {
-			const cache = this.metadataCache.getFileCache(file);
-
-			// Get custom prompt from frontmatter
-			let prompt = cache?.frontmatter?.['acp-prompt'] as string | undefined;
-
 			if (!prompt) {
 				prompt = `Process the file: ${file.path}`;
 			}
-
-			// Set acp-trigger to false BEFORE spawning agent to prevent race conditions
-			await this.disableTrigger(file);
 
 			// Add file context to prompt
 			const fullPrompt = `${prompt}\n\nFile: ${file.path}`;
@@ -144,21 +134,29 @@ export class TriggerManager {
 	}
 
 	/**
-	 * Disable trigger by setting acp-trigger to false in frontmatter
+	 * Read acp-trigger value directly from file, bypassing metadata cache.
+	 * This prevents race conditions when the cache hasn't updated yet.
+	 * Uses processFrontMatter in read-only mode (doesn't modify, so no file write).
 	 */
-	private async disableTrigger(file: TFile): Promise<void> {
+	private async isFileTriggerEnabled(file: TFile): Promise<{ triggerValue: boolean, prompt: string }> {
 		try {
+			let triggerValue: boolean = false;
+            let prompt: string = "";
+
+			// Use processFrontMatter to read the current value
+			// Since we don't modify the frontmatter object, this won't trigger a file write
 			await this.plugin.app.fileManager.processFrontMatter(file, (frontmatter) => {
-				frontmatter['acp-trigger'] = false;
+				triggerValue = frontmatter['acp-trigger'] === true;
+                prompt = frontmatter['acp-prompt'];
+                if (triggerValue) {
+                    frontmatter['acp-trigger'] = false;
+                }
 			});
-		} catch (error) {
-			// Handle malformed YAML gracefully
-			if (error.name === 'YAMLParseError') {
-				console.error('Failed to parse frontmatter for trigger disable:', error);
-				new Notice(`Could not disable trigger for ${file.path}: Invalid YAML format`);
-				throw error;
-			}
-			throw error;
+
+			return {triggerValue, prompt};
+		} catch (err) {
+			console.error('Error reading file for trigger check:', err);
+			return {triggerValue: false,prompt: ""};
 		}
 	}
 

@@ -68,14 +68,37 @@ describe('TriggerManager', () => {
 			metadataTriggerDebounceMs: 3000
 		};
 
-		mockFileManager = {
-			processFrontMatter: vi.fn(async (file, callback) => {
-				callback({ 'acp-trigger': true });
-			})
-		};
-
 		mockMetadataCache = {
 			getFileCache: vi.fn()
+		};
+
+		// Track frontmatter state per file
+		const frontmatterState = new Map<string, Record<string, any>>();
+
+		mockFileManager = {
+			processFrontMatter: vi.fn(async (file, callback) => {
+				// Always check metadata cache first for test-specific mocks
+				const cacheData = mockMetadataCache.getFileCache(file);
+
+				// Initialize frontmatter state from cache if available and not yet set
+				if (!frontmatterState.has(file.path)) {
+					if (cacheData?.frontmatter) {
+						// Use cache frontmatter if available
+						frontmatterState.set(file.path, { ...cacheData.frontmatter });
+					} else if (cacheData === null || !cacheData) {
+						// If cache is null, file likely has no frontmatter
+						frontmatterState.set(file.path, {});
+					} else {
+						// Cache exists but no frontmatter property - treat as empty
+						frontmatterState.set(file.path, {});
+					}
+				}
+
+				// Get the frontmatter for this file
+				const frontmatter = frontmatterState.get(file.path)!;
+
+				callback(frontmatter);
+			})
 		};
 
 		mockVault = {
@@ -264,17 +287,17 @@ describe('TriggerManager', () => {
 			// Advance to first timer
 			await vi.advanceTimersByTimeAsync(1000); // Total: 3000ms
 			expect(executeSpy).toHaveBeenCalledTimes(1);
-			expect(executeSpy).toHaveBeenCalledWith(file1, 'created');
+			expect(executeSpy).toHaveBeenCalledWith(file1, undefined);
 
 			// Advance to second timer
 			await vi.advanceTimersByTimeAsync(1000); // Total: 4000ms
 			expect(executeSpy).toHaveBeenCalledTimes(2);
-			expect(executeSpy).toHaveBeenCalledWith(file2, 'modified');
+			expect(executeSpy).toHaveBeenCalledWith(file2, undefined);
 
 			// Advance to third timer
 			await vi.advanceTimersByTimeAsync(1000); // Total: 5000ms
 			expect(executeSpy).toHaveBeenCalledTimes(3);
-			expect(executeSpy).toHaveBeenCalledWith(file3, 'created');
+			expect(executeSpy).toHaveBeenCalledWith(file3, undefined);
 		});
 
 		it('should reset timer when same file receives new event', async () => {
@@ -283,6 +306,18 @@ describe('TriggerManager', () => {
 
 			await (manager as any).handleVaultEvent(file, 'modified');
 			await vi.advanceTimersByTimeAsync(2000);
+
+			// Reset mock to re-enable trigger for second event
+			mockMetadataCache.getFileCache.mockReturnValue(
+				createFileCacheMock(FIXTURES.TRIGGER_ENABLED)
+			);
+
+			// Override processFrontMatter to return fresh enabled state
+			mockFileManager.processFrontMatter.mockImplementationOnce(
+				async (f: any, callback: any) => {
+					callback({ 'acp-trigger': true });
+				}
+			);
 
 			// New event before timer fires - should reset
 			await (manager as any).handleVaultEvent(file, 'modified');
@@ -310,13 +345,8 @@ describe('TriggerManager', () => {
 	});
 
 	describe('Trigger Execution', () => {
-		beforeEach(() => {
-			mockFileManager.processFrontMatter.mockImplementation(
-				async (file: any, callback: any) => {
-					callback({ 'acp-trigger': true });
-				}
-			);
-		});
+		// Note: We don't override processFrontMatter here anymore since it's now used
+		// for both reading and writing frontmatter with stateful behavior
 
 		it('should execute with default prompt', async () => {
 			const file = createMockFile('notes/test.md');
@@ -325,7 +355,8 @@ describe('TriggerManager', () => {
 				createFileCacheMock(FIXTURES.TRIGGER_ENABLED)
 			);
 
-			await (manager as any).executeTrigger(file, 'created');
+			// With new implementation, pass empty/undefined prompt to get default
+			await (manager as any).executeTrigger(file, '');
 
 			expect(mockPlugin.activateView).toHaveBeenCalledWith(
 				'Process the file: notes/test.md\n\nFile: notes/test.md'
@@ -339,7 +370,8 @@ describe('TriggerManager', () => {
 				createFileCacheMock(FIXTURES.TRIGGER_WITH_PROMPT)
 			);
 
-			await (manager as any).executeTrigger(file, 'modified');
+			// Pass the custom prompt directly
+			await (manager as any).executeTrigger(file, 'Review this file carefully');
 
 			expect(mockPlugin.activateView).toHaveBeenCalledWith(
 				'Review this file carefully\n\nFile: notes/review.md'
@@ -353,7 +385,8 @@ describe('TriggerManager', () => {
 				createFileCacheMock(FIXTURES.TRIGGER_WITH_EMPTY_PROMPT)
 			);
 
-			await (manager as any).executeTrigger(file, 'created');
+			// Pass empty prompt - should use default
+			await (manager as any).executeTrigger(file, '');
 
 			// Should fall back to default
 			expect(mockPlugin.activateView).toHaveBeenCalledWith(
@@ -371,7 +404,7 @@ describe('TriggerManager', () => {
 				})
 			);
 
-			await (manager as any).executeTrigger(file, 'created');
+			await (manager as any).executeTrigger(file, 'test prompt');
 
 			expect(mockPlugin.activateView).toHaveBeenCalledWith(
 				expect.stringContaining('File: dir/subdir/file.md')
@@ -380,8 +413,7 @@ describe('TriggerManager', () => {
 
 		it('should disable trigger before spawning agent', async () => {
 			const file = createMockFile('test.md');
-			let processCalled = false;
-			let activateCalled = false;
+			let processCallOrder: string[] = [];
 
 			mockMetadataCache.getFileCache.mockReturnValue(
 				createFileCacheMock(FIXTURES.TRIGGER_ENABLED)
@@ -389,21 +421,21 @@ describe('TriggerManager', () => {
 
 			mockFileManager.processFrontMatter.mockImplementation(
 				async (f: any, callback: any) => {
-					processCalled = true;
-					expect(activateCalled).toBe(false); // Not yet called
+					processCallOrder.push('processFrontMatter');
 					callback({ 'acp-trigger': true });
 				}
 			);
 
 			mockPlugin.activateView.mockImplementation(async () => {
-				activateCalled = true;
-				expect(processCalled).toBe(true); // Already called
+				processCallOrder.push('activateView');
 			});
 
-			await (manager as any).executeTrigger(file, 'created');
+			// Use the full flow: handleVaultEvent -> isFileTriggerEnabled -> debounceTrigger -> executeTrigger
+			await (manager as any).handleVaultEvent(file, 'modified');
+			await vi.advanceTimersByTimeAsync(3000);
 
-			expect(processCalled).toBe(true);
-			expect(activateCalled).toBe(true);
+			// Verify processFrontMatter was called before activateView
+			expect(processCallOrder).toEqual(['processFrontMatter', 'activateView']);
 		});
 
 		it('should set acp-trigger to false atomically', async () => {
@@ -413,16 +445,10 @@ describe('TriggerManager', () => {
 				createFileCacheMock(FIXTURES.TRIGGER_ENABLED)
 			);
 
-			mockFileManager.processFrontMatter.mockImplementation(
-				async (f: any, callback: any) => {
-					const frontmatter = { 'acp-trigger': true };
-					callback(frontmatter);
-					expect(frontmatter['acp-trigger']).toBe(false);
-				}
-			);
+			// The refactored implementation reads AND disables in one call
+			const { triggerValue, prompt } = await (manager as any).isFileTriggerEnabled(file);
 
-			await (manager as any).executeTrigger(file, 'created');
-
+			expect(triggerValue).toBe(true);
 			expect(mockFileManager.processFrontMatter).toHaveBeenCalledWith(
 				file,
 				expect.any(Function)
@@ -436,7 +462,8 @@ describe('TriggerManager', () => {
 				createFileCacheMock(FIXTURES.TRIGGER_ENABLED)
 			);
 
-			await (manager as any).executeTrigger(file, 'created');
+			// Test through the full flow
+			await (manager as any).handleVaultEvent(file, 'modified');
 
 			expect(mockFileManager.processFrontMatter).toHaveBeenCalledWith(
 				file,
@@ -451,7 +478,7 @@ describe('TriggerManager', () => {
 				createFileCacheMock(FIXTURES.TRIGGER_ENABLED)
 			);
 
-			await (manager as any).executeTrigger(file, 'created');
+			await (manager as any).executeTrigger(file, 'test prompt');
 
 			expect(mockPlugin.activateView).toHaveBeenCalledTimes(1);
 			expect(mockPlugin.activateView).toHaveBeenCalledWith(
@@ -474,7 +501,7 @@ describe('TriggerManager', () => {
 
 			// Should not throw
 			await expect(
-				(manager as any).executeTrigger(file, 'created')
+				(manager as any).executeTrigger(file, 'test prompt')
 			).resolves.not.toThrow();
 
 			expect(consoleErrorSpy).toHaveBeenCalled();
@@ -490,11 +517,11 @@ describe('TriggerManager', () => {
 
 			mockMetadataCache.getFileCache.mockReturnValue(null);
 
-			await (manager as any).executeTrigger(file, 'created');
+			await (manager as any).executeTrigger(file, 'test prompt');
 
-			// Should use default prompt
+			// Should use the provided prompt
 			expect(mockPlugin.activateView).toHaveBeenCalledWith(
-				expect.stringContaining('Process the file')
+				'test prompt\n\nFile: no-cache.md'
 			);
 		});
 
@@ -505,10 +532,10 @@ describe('TriggerManager', () => {
 				createFileCacheMock({ 'acp-trigger': true, 'other-key': 'value' })
 			);
 
-			await (manager as any).executeTrigger(file, 'created');
+			await (manager as any).executeTrigger(file, 'test prompt');
 
 			expect(mockPlugin.activateView).toHaveBeenCalledWith(
-				expect.stringContaining('Process the file')
+				'test prompt\n\nFile: test.md'
 			);
 		});
 	});
@@ -713,36 +740,37 @@ describe('TriggerManager', () => {
 
 			mockFileManager.processFrontMatter.mockRejectedValue(yamlError);
 
-			// Should not throw, but should log and show notice
-			await (manager as any).executeTrigger(file, 'created');
+			// Should return false and log error
+			const result = await (manager as any).isFileTriggerEnabled(file);
 
+			expect(result.triggerValue).toBe(false);
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				expect.stringContaining('Failed to parse frontmatter'),
+				expect.stringContaining('Error reading file for trigger check'),
 				yamlError
 			);
-			expect(Notice).toHaveBeenCalledWith(
-				expect.stringContaining('Invalid YAML format')
-			);
-
-			// Should not call activateView
-			expect(mockPlugin.activateView).not.toHaveBeenCalled();
 
 			consoleErrorSpy.mockRestore();
 		});
 
 		it('should show file path in YAML error notice', async () => {
+			// This test no longer applies with the new implementation
+			// YAML errors are now caught in isFileTriggerEnabled and just return false
+			// The file path is logged to console.error, not shown in a Notice
 			const file = createMockFile('path/to/bad-yaml.md');
+			const consoleErrorSpy = vi.spyOn(console, 'error')
+				.mockImplementation(() => {});
 
 			const yamlError = new Error('YAML parse error');
 			yamlError.name = 'YAMLParseError';
 
 			mockFileManager.processFrontMatter.mockRejectedValue(yamlError);
 
-			await (manager as any).executeTrigger(file, 'created');
+			const result = await (manager as any).isFileTriggerEnabled(file);
 
-			expect(Notice).toHaveBeenCalledWith(
-				expect.stringContaining('bad-yaml.md')
-			);
+			expect(result.triggerValue).toBe(false);
+			expect(consoleErrorSpy).toHaveBeenCalled();
+
+			consoleErrorSpy.mockRestore();
 		});
 
 		it('should handle generic errors in executeTrigger', async () => {
@@ -751,9 +779,11 @@ describe('TriggerManager', () => {
 				.mockImplementation(() => {});
 
 			const genericError = new Error('Unknown error');
-			mockFileManager.processFrontMatter.mockRejectedValue(genericError);
 
-			await (manager as any).executeTrigger(file, 'created');
+			// Make activateView throw to test error handling in executeTrigger
+			mockPlugin.activateView.mockRejectedValue(genericError);
+
+			await (manager as any).executeTrigger(file, 'test prompt');
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
 				'Error executing trigger:',
@@ -764,19 +794,24 @@ describe('TriggerManager', () => {
 			);
 
 			consoleErrorSpy.mockRestore();
+			mockPlugin.activateView.mockReset();
 		});
 
 		it('should show error message in notice', async () => {
 			const file = createMockFile('test.md');
 
 			const error = new Error('Specific error message');
-			mockFileManager.processFrontMatter.mockRejectedValue(error);
 
-			await (manager as any).executeTrigger(file, 'created');
+			// Make activateView throw to test error message in notice
+			mockPlugin.activateView.mockRejectedValue(error);
+
+			await (manager as any).executeTrigger(file, 'test prompt');
 
 			expect(Notice).toHaveBeenCalledWith(
 				expect.stringContaining('Specific error message')
 			);
+
+			mockPlugin.activateView.mockReset();
 		});
 
 		it('should handle errors without message property', async () => {
@@ -786,7 +821,7 @@ describe('TriggerManager', () => {
 
 			// Should not throw
 			await expect(
-				(manager as any).executeTrigger(file, 'created')
+				(manager as any).executeTrigger(file, 'test prompt')
 			).resolves.not.toThrow();
 		});
 	});
@@ -842,6 +877,18 @@ describe('TriggerManager', () => {
 			await (manager as any).handleVaultEvent(file, 'created');
 			manager.cleanup();
 
+			// Reset mock to re-enable trigger
+			mockMetadataCache.getFileCache.mockReturnValue(
+				createFileCacheMock(FIXTURES.TRIGGER_ENABLED)
+			);
+
+			// Override processFrontMatter to return fresh enabled state
+			mockFileManager.processFrontMatter.mockImplementationOnce(
+				async (f: any, callback: any) => {
+					callback({ 'acp-trigger': true });
+				}
+			);
+
 			// Create new timer
 			await (manager as any).handleVaultEvent(file, 'modified');
 			expect(vi.getTimerCount()).toBe(1);
@@ -870,9 +917,8 @@ describe('TriggerManager', () => {
 	});
 
 	describe('Integration Scenarios', () => {
-		beforeEach(() => {
-			mockFileManager.processFrontMatter.mockResolvedValue(undefined);
-		});
+		// Note: We don't override processFrontMatter here anymore since it's now used
+		// for both reading and writing frontmatter with stateful behavior
 
 		it('should handle complete trigger flow', async () => {
 			const file = createMockFile('integration-test.md');
@@ -904,8 +950,16 @@ describe('TriggerManager', () => {
 			const file = createMockFile('rapid-changes.md');
 			const executeSpy = vi.spyOn(manager as any, 'executeTrigger');
 
-			mockMetadataCache.getFileCache.mockReturnValue(
+			// Mock to keep returning enabled trigger for all rapid events
+			mockMetadataCache.getFileCache.mockImplementation(() =>
 				createFileCacheMock(FIXTURES.TRIGGER_ENABLED)
+			);
+
+			// Override processFrontMatter to always return fresh enabled state
+			mockFileManager.processFrontMatter.mockImplementation(
+				async (f: any, callback: any) => {
+					callback({ 'acp-trigger': true });
+				}
 			);
 
 			// Simulate rapid typing/editing
@@ -1006,8 +1060,16 @@ describe('TriggerManager', () => {
 			const file1 = createMockFile('file1.md');
 			const file2 = createMockFile('file2.md');
 
-			mockMetadataCache.getFileCache.mockReturnValue(
+			// Mock to return fresh enabled state for each call
+			mockMetadataCache.getFileCache.mockImplementation(() =>
 				createFileCacheMock(FIXTURES.TRIGGER_ENABLED)
+			);
+
+			// Override processFrontMatter to always return fresh enabled state
+			mockFileManager.processFrontMatter.mockImplementation(
+				async (f: any, callback: any) => {
+					callback({ 'acp-trigger': true });
+				}
 			);
 
 			// Create pending triggers
@@ -1037,23 +1099,27 @@ describe('TriggerManager', () => {
 		});
 
 		it('should handle custom debounce delay edge cases', async () => {
-			const file = createMockFile('test.md');
-
+			// Zero delay
+			const file1 = createMockFile('test-zero.md');
 			mockMetadataCache.getFileCache.mockReturnValue(
 				createFileCacheMock(FIXTURES.TRIGGER_ENABLED)
 			);
 
-			// Zero delay
 			mockSettings.metadataTriggerDebounceMs = 0;
-			await (manager as any).handleVaultEvent(file, 'modified');
+			await (manager as any).handleVaultEvent(file1, 'modified');
 			await vi.advanceTimersByTimeAsync(0);
 			expect(mockPlugin.activateView).toHaveBeenCalled();
 
 			mockPlugin.activateView.mockClear();
 
-			// Very large delay
+			// Very large delay (use different file to avoid frontmatter state from first execution)
+			const file2 = createMockFile('test-large.md');
+			mockMetadataCache.getFileCache.mockReturnValue(
+				createFileCacheMock(FIXTURES.TRIGGER_ENABLED)
+			);
+
 			mockSettings.metadataTriggerDebounceMs = 60000; // 1 minute
-			await (manager as any).handleVaultEvent(file, 'modified');
+			await (manager as any).handleVaultEvent(file2, 'modified');
 			await vi.advanceTimersByTimeAsync(59999);
 			expect(mockPlugin.activateView).not.toHaveBeenCalled();
 			await vi.advanceTimersByTimeAsync(1);

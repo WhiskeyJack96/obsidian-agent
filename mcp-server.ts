@@ -10,6 +10,14 @@ interface MCPServerConfig {
 	port: number;
 }
 
+// Extended App interface to access undocumented Obsidian commands API
+interface ObsidianApp extends App {
+	commands: {
+		listCommands(): Command[];
+		executeCommandById(commandId: string): boolean;
+	};
+}
+
 export class ObsidianMCPServer {
 	private mcpServer: McpServer;
 	private expressApp: Express;
@@ -56,7 +64,7 @@ export class ObsidianMCPServer {
 			async () => {
 				try {
 					// Get all commands from Obsidian
-					const commands: Command[] = (this.obsidianApp as any).commands.listCommands();
+					const commands: Command[] = (this.obsidianApp as ObsidianApp).commands.listCommands();
 
 					// Format commands for output
 					const formattedCommands = commands.map(cmd => ({
@@ -107,7 +115,7 @@ export class ObsidianMCPServer {
 			async ({ commandId }: { commandId: string }) => {
 				try {
 					// Verify command exists
-					const commands: Command[] = (this.obsidianApp as any).commands.listCommands();
+					const commands: Command[] = (this.obsidianApp as ObsidianApp).commands.listCommands();
 					const commandExists = commands.some(cmd => cmd.id === commandId);
 
 					if (!commandExists) {
@@ -128,7 +136,7 @@ export class ObsidianMCPServer {
 					}
 
 					// Execute the command
-					const success = (this.obsidianApp as any).commands.executeCommandById(commandId);
+					const success = (this.obsidianApp as ObsidianApp).commands.executeCommandById(commandId);
 
 					const output = {
 						success: Boolean(success),
@@ -234,7 +242,7 @@ export class ObsidianMCPServer {
 		return new Promise((resolve, reject) => {
 			try {
 				this.httpServer = this.expressApp.listen(this.port, () => {
-					console.log(`Obsidian MCP Server running on http://localhost:${this.port}/mcp`);
+					console.debug(`Obsidian MCP Server running on http://localhost:${this.port}/mcp`);
 					resolve();
 				});
 
@@ -251,7 +259,7 @@ export class ObsidianMCPServer {
 		return new Promise((resolve) => {
 			if (this.httpServer) {
 				this.httpServer.close(() => {
-					console.log('Obsidian MCP Server stopped');
+					console.debug('Obsidian MCP Server stopped');
 					resolve();
 				});
 			} else {

@@ -1,5 +1,4 @@
 import { TFile, Vault, Notice } from 'obsidian';
-import { TriggerConfig } from './settings';
 import type ACPClientPlugin from './main';
 
 export class TriggerManager {
@@ -71,79 +70,93 @@ export class TriggerManager {
 	private async handleVaultEvent(file: TFile, event: 'created' | 'modified') {
 		const filePath = file.path;
 
+		// Skip if metadata triggers are disabled
+		if (!this.plugin.settings.enableMetadataTriggers) {
+			return;
+		}
+
 		// Skip if this file was written by an agent during any active turn
 		if (this.isFileTracked(filePath)) {
 			return;
 		}
 
-		// Find matching triggers
-		const matchingTriggers = this.plugin.settings.triggers.filter(trigger => {
-			if (!trigger.enabled) {
-				return false;
-			}
+		// Check if file has acp-trigger set to true by reading file directly, and if so update it to false
+		// This bypasses metadata cache to avoid race conditions
+		const triggerArgs = await this.isFileTriggerEnabled(file);
 
-			// "." means all notes
-			if (trigger.folder === '.') {
-				return true;
-			}
-
-			// Otherwise check if file is in the trigger folder
-			return filePath.startsWith(trigger.folder);
-		});
-
-		if (matchingTriggers.length === 0) {
+		if (!triggerArgs.triggerValue) {
 			return;
 		}
 
-		// Process each matching trigger with debouncing
-		for (const trigger of matchingTriggers) {
-			this.debounceTrigger(trigger, file, event);
-		}
+		// Debounce trigger execution
+		this.debounceTrigger(file, triggerArgs.prompt);
 	}
 
 	/**
 	 * Debounce trigger execution per file path
 	 */
-	private debounceTrigger(trigger: TriggerConfig, file: TFile, event: 'created' | 'modified') {
-		const debounceKey = `${trigger.id}:${file.path}`;
+	private debounceTrigger(file: TFile, prompt: string) {
+		const debounceKey = file.path;
 
-		// Clear existing timer for this trigger+file combination
+		// Clear existing timer for this file
 		if (this.debounceTimers.has(debounceKey)) {
 			clearTimeout(this.debounceTimers.get(debounceKey)!);
 		}
 
 		// Set new timer
 		const timer = setTimeout(() => {
-			this.executeTrigger(trigger, file, event);
+			this.executeTrigger(file, prompt );
 			this.debounceTimers.delete(debounceKey);
-		}, trigger.debounceMs);
+		}, this.plugin.settings.metadataTriggerDebounceMs);
 
 		this.debounceTimers.set(debounceKey, timer);
 	}
 
 	/**
-	 * Execute a trigger: read file content, replace placeholders, spawn agent
+	 * Execute a trigger: read metadata, set acp-trigger to false, spawn agent
 	 */
-	private async executeTrigger(trigger: TriggerConfig, file: TFile, event: 'created' | 'modified') {
+	private async executeTrigger(file: TFile, prompt: string) {
 		try {
-			// Read file content
-			const content = await this.vault.read(file);
+			if (!prompt) {
+				prompt = `Process the file: ${file.path}`;
+			}
 
-			// Replace placeholders in prompt template
-			const prompt = trigger.prompt
-				.replace(/{file}/g, file.path)
-				.replace(/{event}/g, event)
-				.replace(/{content}/g, content);
+			// Add file context to prompt
+			const fullPrompt = `${prompt}\n\nFile: ${file.path}`;
 
-			// Show notice to user
-			new Notice(`Trigger activated: ${trigger.folder} (${event})`);
-
-			// Spawn new agent view with the generated prompt
-			await this.plugin.activateView(prompt);
+			// Spawn agent view
+			await this.plugin.activateView(fullPrompt);
 
 		} catch (error) {
 			console.error('Error executing trigger:', error);
 			new Notice(`Failed to execute trigger: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Read acp-trigger value directly from file, bypassing metadata cache.
+	 * This prevents race conditions when the cache hasn't updated yet.
+	 * Uses processFrontMatter in read-only mode (doesn't modify, so no file write).
+	 */
+	private async isFileTriggerEnabled(file: TFile): Promise<{ triggerValue: boolean, prompt: string }> {
+		try {
+			let triggerValue: boolean = false;
+            let prompt: string = "";
+
+			// Use processFrontMatter to read the current value
+			// Since we don't modify the frontmatter object, this won't trigger a file write
+			await this.plugin.app.fileManager.processFrontMatter(file, (frontmatter) => {
+				triggerValue = frontmatter['acp-trigger'] === true;
+                prompt = frontmatter['acp-prompt'];
+                if (triggerValue) {
+                    frontmatter['acp-trigger'] = false;
+                }
+			});
+
+			return {triggerValue, prompt};
+		} catch (err) {
+			console.error('Error reading file for trigger check:', err);
+			return {triggerValue: false,prompt: ""};
 		}
 	}
 

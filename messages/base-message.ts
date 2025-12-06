@@ -1,4 +1,10 @@
 import { Component } from 'obsidian';
+import { AvailableCommand, ToolCallUpdate } from '../types';
+
+/**
+ * Union type for all possible message update data types.
+ */
+export type MessageUpdateData = string | AvailableCommand[] | Partial<ToolCallUpdate>;
 
 /**
  * Base class for all message types in the agent view.
@@ -31,7 +37,7 @@ export abstract class Message {
 	/**
 	 * Update the message with new data (optional, not all messages support updates).
 	 */
-	update?(data: any): void;
+	update?(data: MessageUpdateData): void | Promise<void>;
 
 	/**
 	 * Remove the message from the DOM.

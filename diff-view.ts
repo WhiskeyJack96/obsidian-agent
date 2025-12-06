@@ -48,6 +48,8 @@ export class DiffView extends ItemView {
 		return parts[parts.length - 1] || this.diffData.path;
 	}
 
+	// Obsidian API requires Promise<void> return type, but onOpen only does synchronous DOM setup
+	// eslint-disable-next-line @typescript-eslint/require-await
 	async onOpen(): Promise<void> {
 		const container = this.containerEl.children[1];
 		container.empty();

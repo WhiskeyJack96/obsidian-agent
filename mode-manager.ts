@@ -18,7 +18,11 @@ export class ModeManager {
 			cls: 'acp-mode-selector'
 		});
 		this.modeSelector.disabled = true; // Initially disabled until session is created
-		this.modeSelector.addEventListener('change', () => this.handleModeChange());
+		this.modeSelector.addEventListener('change', () => {
+			this.handleModeChange().catch((err) => {
+				console.error('Error handling mode change:', err);
+			});
+		});
 	}
 
 	setClient(client: ACPClient | null): void {

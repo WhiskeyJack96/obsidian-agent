@@ -70,6 +70,8 @@ export class AgentView extends ItemView {
 		return 'bot';
 	}
 
+	// Obsidian API requires Promise<void> return type, but onOpen only does synchronous DOM setup
+	// eslint-disable-next-line @typescript-eslint/require-await
 	async onOpen(): Promise<void> {
 		const container = this.containerEl.children[1];
 		container.empty();
@@ -88,14 +90,23 @@ export class AgentView extends ItemView {
 		// Create mode manager
 		this.modeManager = new ModeManager(
 			statusBarContainer,
-			(modeName) => this.addMessage('system', `Mode changed to: ${modeName}`)
+			(modeName) => {
+				this.addMessage('system', `Mode changed to: ${modeName}`).catch((err) => {
+					console.error('Error adding mode change message:', err);
+				});
+			}
 		);
 
 		const newConversationButton = statusBarContainer.createEl('button', {
 			cls: 'acp-new-conversation-button',
-			text: 'New Conversation'
+			text: 'New conversation'
 		});
-		newConversationButton.addEventListener('click', () => this.newConversation());
+		newConversationButton.addEventListener('click', () => {
+			this.newConversation().catch((err) => {
+				new Notice(`Failed to start new conversation: ${err.message}`);
+				console.error('Error in newConversation:', err);
+			});
+		});
 
 		// Add session loading controls (initially hidden until we know agent capabilities)
 		this.sessionIdInput = statusBarContainer.createEl('input', {
@@ -109,17 +120,27 @@ export class AgentView extends ItemView {
 
 		this.loadSessionButton = statusBarContainer.createEl('button', {
 			cls: 'acp-load-session-button',
-			text: 'Load Session'
+			text: 'Load session'
 		});
 		this.loadSessionButton.addClass('acp-hidden');
-		this.loadSessionButton.addEventListener('click', () => this.loadExistingSession());
+		this.loadSessionButton.addEventListener('click', () => {
+			this.loadExistingSession().catch((err) => {
+				new Notice(`Failed to load session: ${err.message}`);
+				console.error('Error in loadExistingSession:', err);
+			});
+		});
 
 		this.cancelButton = statusBarContainer.createEl('button', {
 			cls: 'acp-cancel-button',
 			text: 'Cancel'
 		});
 		this.cancelButton.addClass('acp-hidden');
-		this.cancelButton.addEventListener('click', () => this.cancelCurrentTurn());
+		this.cancelButton.addEventListener('click', () => {
+			this.cancelCurrentTurn().catch((err) => {
+				new Notice(`Failed to cancel operation: ${err.message}`);
+				console.error('Error in cancelCurrentTurn:', err);
+			});
+		});
 
 		// Create write approval toggle button
 		this.writeApprovalToggle = statusBarContainer.createEl('button', {
@@ -130,7 +151,12 @@ export class AgentView extends ItemView {
 			}
 		});
 		this.updateWriteApprovalToggle();
-		this.writeApprovalToggle.addEventListener('click', () => this.toggleWriteApproval());
+		this.writeApprovalToggle.addEventListener('click', () => {
+			this.toggleWriteApproval().catch((err) => {
+				new Notice(`Failed to toggle write approval: ${err.message}`);
+				console.error('Error in toggleWriteApproval:', err);
+			});
+		});
 
 		// Create messages container
 		this.messagesContainer = container.createDiv({ cls: 'acp-messages' });

@@ -1,5 +1,5 @@
 import { App, Component, Vault, TFile } from 'obsidian';
-import { Message } from './base-message';
+import { Message, MessageUpdateData } from './base-message';
 import { TextMessage } from './text-message';
 import { ThoughtMessage } from './thought-message';
 import { ToolCallMessage } from './tool-call-message';
@@ -61,7 +61,7 @@ export class MessageRenderer {
 	/**
 	 * Update an existing message with new data.
 	 */
-	async updateMessage(id: string, data: any): Promise<void> {
+	async updateMessage(id: string, data: MessageUpdateData): Promise<void> {
 		const message = this.messages.get(id);
 		if (message && message.update) {
 			await message.update(data);

@@ -1,4 +1,4 @@
-import { App } from 'obsidian';
+import { App, TFile, MarkdownView } from 'obsidian';
 
 interface AutocompleteItem {
 	type: 'command' | 'file' | 'open_note';
@@ -27,14 +27,14 @@ export class AutocompleteManager {
 		this.availableCommands = commands;
 	}
 
-	private getOpenFiles(): Array<{file: any; isActive: boolean}> {
+	private getOpenFiles(): Array<{file: TFile; isActive: boolean}> {
 		const activeFile = this.app.workspace.getActiveFile();
-		const openFiles: Array<{file: any; isActive: boolean}> = [];
+		const openFiles: Array<{file: TFile; isActive: boolean}> = [];
 
 		// Get all markdown views
 		const leaves = this.app.workspace.getLeavesOfType('markdown');
 		for (const leaf of leaves) {
-			const file = (leaf.view as any)?.file;
+			const file = (leaf.view as MarkdownView)?.file;
 			if (file) {
 				openFiles.push({
 					file,

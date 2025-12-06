@@ -63,7 +63,7 @@ export default class ACPClientPlugin extends Plugin {
 		// Add command to open agent view (creates new conversation)
 		this.addCommand({
 			id: 'open-agent-view',
-			name: 'Open Agent View',
+			name: 'Open agent view',
 			callback: () => {
 				this.activateView();
 			}
@@ -72,7 +72,7 @@ export default class ACPClientPlugin extends Plugin {
 		// Add command to cycle through modes
 		this.addCommand({
 			id: 'cycle-mode',
-			name: 'Cycle Agent Mode',
+			name: 'Cycle agent mode',
 			callback: () => {
 				const view = this.getActiveAgentView();
 				if (view && typeof view.cycleMode === 'function') {
@@ -86,8 +86,7 @@ export default class ACPClientPlugin extends Plugin {
 		// Add command to start new conversation
 		this.addCommand({
 			id: 'new-conversation',
-			name: 'New Conversation',
-			hotkeys: [{ modifiers: ["Mod", "Shift"], key: "N" }],
+			name: 'New conversation',
 			callback: () => {
 				const view = this.getActiveAgentView();
 				if (view) view.newConversation();
@@ -97,8 +96,7 @@ export default class ACPClientPlugin extends Plugin {
 		// Add command to focus input
 		this.addCommand({
 			id: 'focus-input',
-			name: 'Focus Input',
-			hotkeys: [{ modifiers: ["Mod", "Shift"], key: "I" }],
+			name: 'Focus input',
 			callback: () => {
 				const view = this.getActiveAgentView();
 				if (view) view.focusInput();
@@ -108,7 +106,7 @@ export default class ACPClientPlugin extends Plugin {
 		// Add command to start session for current note
 		this.addCommand({
 			id: 'start-session-current-note',
-			name: 'Start Session for Current Note',
+			name: 'Start session for current note',
 			callback: async () => {
 				const activeFile = this.app.workspace.getActiveFile();
 				if (!activeFile) {
@@ -128,8 +126,7 @@ export default class ACPClientPlugin extends Plugin {
 		// Approve permission
 		this.addCommand({
 			id: 'approve-permission',
-			name: 'Approve Permission',
-			hotkeys: [{ modifiers: ["Mod"], key: "Enter" }],
+			name: 'Approve permission',
 			callback: () => {
 				const view = this.getActiveAgentView();
 				if (view) view.approvePermission();
@@ -139,8 +136,7 @@ export default class ACPClientPlugin extends Plugin {
 		// Reject permission
 		this.addCommand({
 			id: 'reject-permission',
-			name: 'Reject Permission',
-			hotkeys: [{ modifiers: ["Mod"], key: "Backspace" }],
+			name: 'Reject permission',
 			callback: () => {
 				const view = this.getActiveAgentView();
 				if (view) view.rejectPermission();
@@ -150,8 +146,7 @@ export default class ACPClientPlugin extends Plugin {
 		// Cancel operation
 		this.addCommand({
 			id: 'cancel-operation',
-			name: 'Cancel Operation',
-			hotkeys: [{ modifiers: ["Ctrl"], key: "c" }],
+			name: 'Cancel operation',
 			callback: () => {
 				const view = this.getActiveAgentView();
 				if (view) view.cancelCurrentTurn();

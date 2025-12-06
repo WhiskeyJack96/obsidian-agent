@@ -14,7 +14,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'ACP Client Settings' });
+		new Setting(containerEl).setName('ACP Client Settings').setHeading();
 
 		new Setting(containerEl)
 			.setName('Agent Command')
@@ -51,7 +51,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 				.addOption('split', 'Split (Main Area)')
 				.setValue(this.plugin.settings.defaultViewType)
 				.onChange(async (value) => {
-					this.plugin.settings.defaultViewType = value as any;
+					this.plugin.settings.defaultViewType = value as 'right-sidebar' | 'left-sidebar' | 'tab' | 'split';
 					await this.plugin.saveSettings();
 				}));
 		new Setting(containerEl)
@@ -67,7 +67,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
 
 		// Conversation Tracking section
-		containerEl.createEl('h2', { text: 'Conversation Tracking' });
+		new Setting(containerEl).setName('Conversation Tracking').setHeading();
 
 		new Setting(containerEl)
 			.setName('Enable Conversation Tracking')
@@ -91,10 +91,12 @@ export class ACPClientSettingTab extends PluginSettingTab {
 				}));
 
 		// Alpha Features section
-		containerEl.createEl('h2', { text: 'Alpha Features' });
+		new Setting(containerEl).setName('Alpha Features').setHeading();
 
 		const alphaWarningContainer = containerEl.createDiv({ cls: 'acp-alpha-warning-container setting-item-description' });
-		alphaWarningContainer.innerHTML = '<strong>⚠️ ALPHA:</strong> These features are experimental and may change or be removed in future versions. Use with caution.';
+		const strong = alphaWarningContainer.createEl('strong');
+		strong.setText('⚠️ ALPHA:');
+		alphaWarningContainer.appendText(' These features are experimental and may change or be removed in future versions. Use with caution.');
 
 		// Obsidian Focussed Prompt
 		const obsidianPromptSetting = new Setting(containerEl)
@@ -109,7 +111,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		obsidianPromptSetting.settingEl.addClass('acp-setting-alpha-border');
 
 		// MCP Server section
-		const mcpHeader = containerEl.createEl('h4', { text: 'MCP Server', cls: 'acp-alpha-section-header' });
+		new Setting(containerEl).setName('MCP Server').setHeading().settingEl.addClass('acp-alpha-section-header');
 
 		const mcpEnableSetting = new Setting(containerEl)
 			.setName('Enable MCP Server')
@@ -154,7 +156,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		mcpInfoEl.setText(`MCP Server endpoint: http://localhost:${this.plugin.settings.mcpServerPort}/mcp`);
 
 		// Metadata-Based Triggers section
-		const triggersHeader = containerEl.createEl('h4', { text: 'Metadata-Based Triggers', cls: 'acp-alpha-section-header' });
+		new Setting(containerEl).setName('Metadata-based triggers').setHeading().settingEl.addClass('acp-alpha-section-header');
 
 		const triggersDesc = containerEl.createDiv({ cls: 'acp-info-text-bottom-margin setting-item-description' });
 		triggersDesc.setText('Automatically trigger agent sessions when files have acp-trigger: true in their frontmatter');

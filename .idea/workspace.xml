@@ -5,19 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4877294b-421b-42da-be97-e3a77a5b85cf" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/tests/integration/mcp-auth.integration.test.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TODO.md" beforeDir="false" afterPath="$PROJECT_DIR$/TODO.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/acp-client.ts" beforeDir="false" afterPath="$PROJECT_DIR$/acp-client.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/main.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mcp-server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mcp-server.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/messages/permission-request-message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/permission-request-message.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agent-view.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agent-view.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/messages/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/messages/message-renderer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/message-renderer.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/messages/permission-request-message.ts" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/messages/tool-call-message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/tool-call-message.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/acp-client.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tests/acp-client.test.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/trigger-manager.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tests/trigger-manager.test.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/styles.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,6 +40,7 @@
     "RunOnceActivity.go.formatter.settings.were.checked": "true",
     "RunOnceActivity.go.migrated.go.modules.settings": "true",
     "RunOnceActivity.go.modules.go.list.on.any.changes.was.set": "true",
+    "Vitest.MCP Token Authentication Integration.executor": "Run",
     "git-widget-placeholder": "main",
     "go.import.settings.migrated": "true",
     "go.sdk.automatically.set": "true",

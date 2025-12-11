@@ -333,4 +333,18 @@ export class MessageRenderer {
 			await vault.create(filePath, markdown);
 		}
 	}
+
+	/**
+	 * Apply a permission request to a specific tool call message by its ID.
+	 */
+	applyPermissionToToolCall(
+		toolCallId: string,
+		options: Array<{ kind: string; name: string; optionId: string }>,
+		resolve: (optionId: string) => void
+	): void {
+		const message = this.messages.get(toolCallId);
+		if (message && message instanceof ToolCallMessage) {
+			message.addPermissionUI(options, resolve);
+		}
+	}
 }

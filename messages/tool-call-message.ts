@@ -8,6 +8,8 @@ import { ToolCallUpdate } from '../types';
 export class ToolCallMessage extends Message {
 	private data: ToolCallUpdate;
 	private contentEl: HTMLElement | null = null;
+	private permissionsEl: HTMLElement | null = null;
+	private messageEl: HTMLElement | null = null;
 
 	constructor(id: string, data: ToolCallUpdate, component: Component) {
 		super(id, component);
@@ -15,10 +17,10 @@ export class ToolCallMessage extends Message {
 	}
 
 	render(container: HTMLElement): HTMLElement {
-		const messageEl = this.createMessageElement(container, 'acp-message-tool');
-		this.contentEl = messageEl.createDiv({ cls: 'acp-message-content' });
+		this.messageEl = this.createMessageElement(container, 'acp-message-tool');
+		this.contentEl = this.messageEl.createDiv({ cls: 'acp-message-content' });
 		this.renderContent();
-		return messageEl;
+		return this.messageEl;
 	}
 
 	update(newData: Partial<ToolCallUpdate>): void {
@@ -83,7 +85,7 @@ export class ToolCallMessage extends Message {
 			let parsedInput: unknown;
 			try {
 				parsedInput = typeof this.data.rawInput === 'string' ? JSON.parse(this.data.rawInput) : this.data.rawInput;
-			} catch (e) {
+			} catch {
 				parsedInput = this.data.rawInput;
 			}
 
@@ -158,6 +160,47 @@ export class ToolCallMessage extends Message {
 
 	getData(): ToolCallUpdate {
 		return this.data;
+	}
+
+	/**
+	 * Add inline permission buttons to this tool call message.
+	 */
+	addPermissionUI(options: Array<{ kind: string; name: string; optionId: string }>, resolve: (optionId: string) => void): void {
+		if (!this.contentEl || !this.messageEl) {
+			return;
+		}
+
+		this.messageEl.addClass('acp-message-tool-pending-permission');
+
+		// Remove existing permissions element if present
+		if (this.permissionsEl) {
+			this.permissionsEl.remove();
+		}
+
+		// Create permissions container inline at the bottom of content
+		this.permissionsEl = this.contentEl.createDiv({ cls: 'acp-tool-permission-buttons' });
+
+		// Add buttons directly (no header, no wrapper section)
+		for (const option of options) {
+			const button = this.permissionsEl.createEl('button', {
+				cls: `acp-tool-permission-btn acp-tool-permission-${option.kind}`,
+				text: option.name
+			});
+
+			button.addEventListener('click', () => {
+				// Remove permissions UI and reset styling
+				if (this.permissionsEl) {
+					this.permissionsEl.remove();
+					this.permissionsEl = null;
+				}
+				if (this.messageEl) {
+					this.messageEl.removeClass('acp-message-tool-pending-permission');
+				}
+
+				// Resolve with selected option
+				resolve(option.optionId);
+			});
+		}
 	}
 
 	toMarkdown(): string {

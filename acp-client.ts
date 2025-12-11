@@ -1,7 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import { ClientSideConnection, ndJsonStream, Client, Agent, AgentCapabilities } from '@agentclientprotocol/sdk';
 import { Readable as NodeReadable, Writable as NodeWritable } from 'stream';
-import { ReadableStream, WritableStream } from 'stream/web';
 import { App, Notice, FileSystemAdapter } from 'obsidian';
 import { ACPClientSettings } from './settings';
 import * as schema from '@agentclientprotocol/sdk';

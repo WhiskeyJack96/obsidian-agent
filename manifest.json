@@ -1,7 +1,7 @@
 {
 	"id": "lodestone",
 	"name": "Lodestone",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"minAppVersion": "1.9.0",
 	"description": "Enables an AI Agent (Lode) that uses Agent Client Protocol (ACP), to communicate directly with your notes.",
 	"author": "Jacob Mikesell",

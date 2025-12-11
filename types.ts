@@ -20,6 +20,7 @@ import type {
 	RequestPermissionResponse,
 	SessionMode,
 	PromptResponse,
+    ToolCallUpdate,
 } from '@agentclientprotocol/sdk';
 
 export type {
@@ -35,53 +36,8 @@ export type {
 	RequestPermissionResponse,
 	SessionMode,
 	PromptResponse,
+    ToolCallUpdate,
 }
-
-
-export type ToolCallUpdate = {
-		/**
-		 * Extension point for implementations
-		 */
-		_meta?: {
-			[k: string]: unknown;
-		};
-		/**
-		 * Replace the content collection.
-		 */
-		content?: ToolCallContent[] | null;
-		/**
-		 * Update the tool kind.
-		 */
-		kind?: ToolKind | null;
-		/**
-		 * Replace the locations collection.
-		 */
-		locations?: ToolCallLocation[] | null;
-		/**
-		 * Update the raw input.
-		 */
-		rawInput?: {
-			[k: string]: unknown;
-		};
-		/**
-		 * Update the raw output.
-		 */
-		rawOutput?: {
-			[k: string]: unknown;
-		};
-		/**
-		 * Update the execution status.
-		 */
-		status?: ToolCallStatus | null;
-		/**
-		 * Update the human-readable title.
-		 */
-		title?: string | null;
-		/**
-		 * The ID of the tool call being updated.
-		 */
-		toolCallId: string;
-	};
 
 /**
  * Session mode state tracking available modes and current selection

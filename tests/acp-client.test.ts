@@ -486,6 +486,10 @@ describe('ACPClient', () => {
 
                 mockSettings.enableMCPServer = true;
                 mockSettings.mcpServerPort = 4000;
+                mockPlugin.mcpServer = {
+                    addAuthToken: vi.fn(),
+                    removeAuthToken: vi.fn()
+                };
                 
                 const mockConnection = {
                     initialize: vi.fn().mockResolvedValue({}),
@@ -614,6 +618,236 @@ describe('ACPClient', () => {
 
             expect(mockMainProcess.kill).toHaveBeenCalled();
             expect(mockPlugin.triggerManager.clearTurnWrites).toHaveBeenCalled();
+        });
+    });
+
+    describe('MCP Token Authentication', () => {
+        let mockProcess: any;
+        let mockConnection: any;
+
+        beforeEach(() => {
+            mockProcess = new EventEmitter();
+            mockProcess.stdout = new EventEmitter();
+            mockProcess.stderr = new EventEmitter();
+            mockProcess.stdin = new EventEmitter();
+            mockProcess.stdin.write = vi.fn();
+            mockProcess.stdin.end = vi.fn();
+            mockProcess.kill = vi.fn();
+            
+            mocks.spawn.mockReturnValue(mockProcess);
+
+            mockConnection = {
+                initialize: vi.fn().mockResolvedValue({ agentCapabilities: { loadSession: true } }),
+                newSession: vi.fn().mockResolvedValue({ sessionId: 'sess-1', modes: { currentModeId: 'default', availableModes: [] } }),
+                loadSession: vi.fn().mockResolvedValue({ modes: { currentModeId: 'default', availableModes: [] } })
+            };
+
+            mocks.ClientSideConnection.mockImplementation(function() { return mockConnection; });
+            mocks.ndJsonStream.mockReturnValue({});
+
+            mockPlugin.mcpServer = {
+                addAuthToken: vi.fn(),
+                removeAuthToken: vi.fn()
+            };
+        });
+
+        describe('Token Generation in createSession()', () => {
+            it('should generate a random token', async () => {
+                mockSettings.enableMCPServer = true;
+                
+                await client.initialize();
+                await client.createSession();
+
+                expect(mockPlugin.mcpServer.addAuthToken).toHaveBeenCalledWith(expect.any(String));
+                const token = mockPlugin.mcpServer.addAuthToken.mock.calls[0][0];
+                expect(token).toHaveLength(64); // 256 bits = 32 bytes = 64 hex chars
+            });
+
+            it('should generate different tokens for different sessions', async () => {
+                mockSettings.enableMCPServer = true;
+                
+                await client.initialize();
+                await client.createSession();
+
+                const token1 = mockPlugin.mcpServer.addAuthToken.mock.calls[0][0];
+
+                // Reset for second session
+                mockPlugin.mcpServer.addAuthToken.mockClear();
+                
+                // Create another session
+                await client.createSession();
+
+                const token2 = mockPlugin.mcpServer.addAuthToken.mock.calls[0][0];
+                expect(token1).not.toBe(token2);
+            });
+
+            it('should include token in Authorization header', async () => {
+                mockSettings.enableMCPServer = true;
+                
+                await client.initialize();
+                await client.createSession();
+
+                const token = mockPlugin.mcpServer.addAuthToken.mock.calls[0][0];
+                
+                expect(mockConnection.newSession).toHaveBeenCalledWith(expect.objectContaining({
+                    mcpServers: expect.arrayContaining([
+                        expect.objectContaining({
+                            headers: expect.arrayContaining([
+                                expect.objectContaining({
+                                    name: 'Authorization',
+                                    value: `Bearer ${token}`
+                                })
+                            ])
+                        })
+                    ])
+                }));
+            });
+
+            it('should not add token when MCP server disabled', async () => {
+                mockSettings.enableMCPServer = false;
+                mockPlugin.mcpServer = null;
+                
+                await client.initialize();
+                await client.createSession();
+
+                expect(mockConnection.newSession).toHaveBeenCalledWith(expect.objectContaining({
+                    mcpServers: []
+                }));
+            });
+
+            it('should handle null mcpServer gracefully', async () => {
+                mockSettings.enableMCPServer = true;
+                mockPlugin.mcpServer = null;
+                
+                await client.initialize();
+                await expect(client.createSession()).resolves.not.toThrow();
+            });
+        });
+
+        describe('Token Generation in loadSession()', () => {
+            it('should generate token on loadSession', async () => {
+                mockSettings.enableMCPServer = true;
+                
+                await client.initialize();
+                await client.loadSession('sess-existing');
+
+                expect(mockPlugin.mcpServer.addAuthToken).toHaveBeenCalledWith(expect.any(String));
+            });
+
+            it('should pass token in headers to loadSession request', async () => {
+                mockSettings.enableMCPServer = true;
+                
+                await client.initialize();
+                await client.loadSession('sess-existing');
+
+                const token = mockPlugin.mcpServer.addAuthToken.mock.calls[0][0];
+                
+                expect(mockConnection.loadSession).toHaveBeenCalledWith(expect.objectContaining({
+                    mcpServers: expect.arrayContaining([
+                        expect.objectContaining({
+                            headers: expect.arrayContaining([
+                                expect.objectContaining({
+                                    name: 'Authorization',
+                                    value: `Bearer ${token}`
+                                })
+                            ])
+                        })
+                    ])
+                }));
+            });
+
+            it('should generate different token than createSession', async () => {
+                mockSettings.enableMCPServer = true;
+                
+                await client.initialize();
+                await client.createSession();
+
+                const token1 = mockPlugin.mcpServer.addAuthToken.mock.calls[0][0];
+
+                mockPlugin.mcpServer.addAuthToken.mockClear();
+
+                await client.loadSession('sess-existing');
+
+                const token2 = mockPlugin.mcpServer.addAuthToken.mock.calls[0][0];
+                expect(token1).not.toBe(token2);
+            });
+        });
+
+        describe('Token Cleanup', () => {
+            it('should remove token from MCP server on cleanup', async () => {
+                mockSettings.enableMCPServer = true;
+                
+                const handlers: Record<string, Function[]> = {};
+                const mockMainProcess = new EventEmitter();
+                (mockMainProcess as any).stdout = new EventEmitter();
+                (mockMainProcess as any).stderr = new EventEmitter();
+                (mockMainProcess as any).stdin = new EventEmitter();
+                (mockMainProcess as any).stdin.write = vi.fn();
+                (mockMainProcess as any).stdin.end = vi.fn();
+                (mockMainProcess as any).kill = vi.fn(() => {
+                    mockMainProcess.emit('exit', 0);
+                });
+
+                mocks.spawn.mockReturnValue(mockMainProcess);
+
+                await client.initialize();
+                await client.createSession();
+
+                const token = mockPlugin.mcpServer.addAuthToken.mock.calls[0][0];
+
+                await client.cleanup();
+
+                expect(mockPlugin.mcpServer.removeAuthToken).toHaveBeenCalledWith(token);
+            });
+
+            it('should handle null mcpServer during cleanup', async () => {
+                mockSettings.enableMCPServer = true;
+                mockPlugin.mcpServer = null;
+                
+                const mockMainProcess = new EventEmitter();
+                (mockMainProcess as any).stdout = new EventEmitter();
+                (mockMainProcess as any).stderr = new EventEmitter();
+                (mockMainProcess as any).stdin = new EventEmitter();
+                (mockMainProcess as any).stdin.write = vi.fn();
+                (mockMainProcess as any).stdin.end = vi.fn();
+                (mockMainProcess as any).kill = vi.fn(() => {
+                    mockMainProcess.emit('exit', 0);
+                });
+
+                mocks.spawn.mockReturnValue(mockMainProcess);
+
+                await client.initialize();
+                await expect(client.cleanup()).resolves.not.toThrow();
+            });
+
+            it('should clear mcpAuthToken field after cleanup', async () => {
+                mockSettings.enableMCPServer = true;
+                
+                const mockMainProcess = new EventEmitter();
+                (mockMainProcess as any).stdout = new EventEmitter();
+                (mockMainProcess as any).stderr = new EventEmitter();
+                (mockMainProcess as any).stdin = new EventEmitter();
+                (mockMainProcess as any).stdin.write = vi.fn();
+                (mockMainProcess as any).stdin.end = vi.fn();
+                (mockMainProcess as any).kill = vi.fn(() => {
+                    mockMainProcess.emit('exit', 0);
+                });
+
+                mocks.spawn.mockReturnValue(mockMainProcess);
+                mockPlugin.mcpServer = {
+                    addAuthToken: vi.fn(),
+                    removeAuthToken: vi.fn()
+                };
+
+                await client.initialize();
+                await client.createSession();
+
+                expect((client as any).mcpAuthToken).not.toBeNull();
+
+                await client.cleanup();
+
+                expect((client as any).mcpAuthToken).toBeNull();
+            });
         });
     });
 });

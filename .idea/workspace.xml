@@ -5,18 +5,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4877294b-421b-42da-be97-e3a77a5b85cf" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/tests/integration/mcp-auth.integration.test.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/TODO.md" beforeDir="false" afterPath="$PROJECT_DIR$/TODO.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/acp-client.ts" beforeDir="false" afterPath="$PROJECT_DIR$/acp-client.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diff-view.ts" beforeDir="false" afterPath="$PROJECT_DIR$/diff-view.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/eslint.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/eslint.config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/feedback.md" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/main.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mcp-server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mcp-server.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/messages/permission-request-message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/permission-request-message.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/settings-tab.ts" beforeDir="false" afterPath="$PROJECT_DIR$/settings-tab.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/styles.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trigger-manager.ts" beforeDir="false" afterPath="$PROJECT_DIR$/trigger-manager.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/messages/tool-call-message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/tool-call-message.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/acp-client.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tests/acp-client.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/trigger-manager.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/tests/trigger-manager.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/types.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -56,6 +57,26 @@
     "ts.external.directory.path": "/Users/jacobmikesell/Workspace/plugin-test-vault/.obsidian/plugins/acp-client/node_modules/typescript/lib"
   }
 }]]></component>
+  <component name="RunManager">
+    <configuration name="MCP Token Authentication Integration" type="JavaScriptTestRunnerVitest" temporary="true" nameIsGenerated="true">
+      <node-interpreter value="project" />
+      <vitest-package value="$PROJECT_DIR$/node_modules/vitest" />
+      <working-dir value="$PROJECT_DIR$" />
+      <vitest-options value="--run" />
+      <envs />
+      <scope-kind value="SUITE" />
+      <test-file value="$PROJECT_DIR$/tests/integration/mcp-auth.integration.test.ts" />
+      <test-names>
+        <test-name value="MCP Token Authentication Integration" />
+      </test-names>
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Vitest.MCP Token Authentication Integration" />
+      </list>
+    </recent_temporary>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>

@@ -510,7 +510,7 @@ A: Yes! Open multiple agent views and configure each with a different agent comm
 A: Conversations are sent to the agent provider (e.g., Anthropic for Claude). Check your agent's privacy policy.
 
 **Q: Can agents access files outside my vault?**
-A: No, file operations are restricted to your vault directory only.
+A: Yes! Agents can run bash to do all sorts of things, be careful! By default the read tool limits to only files in the vault, but a clever/persistent agent will find a way.
 
 **Q: What happens if I close Obsidian during an agent session?**
 A: The agent process is terminated. Conversations are not automatically resumed.

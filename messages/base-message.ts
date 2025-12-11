@@ -70,4 +70,34 @@ export abstract class Message {
 		this.element = messageEl;
 		return messageEl;
 	}
+
+	/**
+	 * Helper to render rawInput as formatted JSON in a collapsible code block.
+	 */
+	protected renderRawInputJson(container: HTMLElement, rawInput: unknown): void {
+		const inputEl = container.createDiv({ cls: 'acp-input-json' });
+		
+		// Create collapsible header
+		const header = inputEl.createDiv({ cls: 'acp-input-json-header' });
+		const toggle = header.createEl('span', { cls: 'acp-input-json-toggle', text: '▶' });
+		header.createSpan({ text: 'Input', cls: 'acp-input-json-label' });
+		
+		// Create code block container (hidden by default)
+		const codeContainer = inputEl.createDiv({ cls: 'acp-input-json-container acp-input-json-collapsed' });
+		const pre = codeContainer.createEl('pre');
+		const code = pre.createEl('code');
+		
+		if (typeof rawInput === 'string') {
+			code.setText(rawInput);
+		} else {
+			code.setText(JSON.stringify(rawInput, null, 2));
+		}
+		
+		// Toggle handler
+		header.addEventListener('click', () => {
+			const isCollapsed = codeContainer.hasClass('acp-input-json-collapsed');
+			codeContainer.toggleClass('acp-input-json-collapsed', !isCollapsed);
+			toggle.setText(isCollapsed ? '▼' : '▶');
+		});
+	}
 }

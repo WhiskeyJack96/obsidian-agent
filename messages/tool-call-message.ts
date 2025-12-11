@@ -53,26 +53,9 @@ export class ToolCallMessage extends Message {
 			toolHeader.createEl('span', { cls: `acp-tool-status-badge acp-tool-status-${this.data.status}` });
 		}
 
-		// Show key arguments if available
+		// Show rawInput as JSON
 		if (this.data.rawInput) {
-			const rawInput = this.data.rawInput;
-			const keyArgs = ['commandId', 'path', 'description', 'command'];
-			const argsToShow: [string, string][] = [];
-
-			for (const key of keyArgs) {
-				if (key in rawInput && typeof rawInput[key] === 'string') {
-					argsToShow.push([key, rawInput[key]]);
-				}
-			}
-
-			if (argsToShow.length > 0) {
-				const argsEl = this.contentEl.createDiv({ cls: 'acp-tool-arguments' });
-				for (const [key, value] of argsToShow) {
-					const argRow = argsEl.createDiv({ cls: 'acp-tool-arg-row' });
-					argRow.createEl('span', { cls: 'acp-tool-arg-key', text: `${key}: ` });
-					argRow.createEl('span', { cls: 'acp-tool-arg-value', text: value });
-				}
-			}
+			this.renderRawInputJson(this.contentEl, this.data.rawInput);
 		}
 
 		// Show content/output if available (only when completed)
@@ -93,13 +76,20 @@ export class ToolCallMessage extends Message {
 		}
 
 		// Try to extract meaningful info from rawInput
-		const rawInput = this.data.rawInput;
 		const kind = this.data.kind;
 
-		if (rawInput) {
+		if (this.data.rawInput) {
+			// Parse rawInput safely
+			let parsedInput: unknown;
+			try {
+				parsedInput = typeof this.data.rawInput === 'string' ? JSON.parse(this.data.rawInput) : this.data.rawInput;
+			} catch (e) {
+				parsedInput = this.data.rawInput;
+			}
+
 			// File operations
-			if (typeof rawInput.path === 'string') {
-				const fileName = rawInput.path.split('/').pop() || rawInput.path;
+			if (typeof parsedInput === 'object' && parsedInput !== null && 'path' in parsedInput && typeof parsedInput.path === 'string') {
+				const fileName = parsedInput.path.split('/').pop() || parsedInput.path;
 				if (kind === 'read') {
 					return `Read file "${fileName}"`;
 				} else if (kind === 'edit') {
@@ -108,15 +98,15 @@ export class ToolCallMessage extends Message {
 			}
 
 			// Terminal commands
-			if (typeof rawInput.command === 'string') {
-				const command = rawInput.command;
-				const args = Array.isArray(rawInput.args) ? ` ${rawInput.args.join(' ')}` : '';
+			if (typeof parsedInput === 'object' && parsedInput !== null && 'command' in parsedInput && typeof parsedInput.command === 'string') {
+				const command = parsedInput.command;
+				const args = Array.isArray((parsedInput as Record<string, unknown>).args) ? ` ${(parsedInput as Record<string, string[]>).args.join(' ')}` : '';
 				return `Run: ${command}${args}`;
 			}
 
 			// Generic description if available
-			if (typeof rawInput.description === 'string') {
-				return rawInput.description;
+			if (typeof parsedInput === 'object' && parsedInput !== null && 'description' in parsedInput && typeof parsedInput.description === 'string') {
+				return parsedInput.description;
 			}
 		}
 

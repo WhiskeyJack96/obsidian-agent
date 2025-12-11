@@ -11,7 +11,7 @@ import { TriggerManager } from './trigger-manager';
 export default class ACPClientPlugin extends Plugin {
 	settings: ACPClientSettings;
 	triggerManager: TriggerManager | null = null;
-	private mcpServer: ObsidianMCPServer | null = null;
+	mcpServer: ObsidianMCPServer | null = null;
 
 	getActiveAgentView(): AgentView | null {
 		// Try to get the active agent view first

@@ -1,13 +1,13 @@
 Ideas:
-- [ ] I should probably add some tests :this-is-fine:
+- [x] I should probably add some tests :this-is-fine:
 - [ ] Should it be possible to add slash commands from _within_ obsidian somehow?
-- [ ] It would be cool to have a command pallete command that lets you start a new session for the current note (maybe by running a slash command, or maybe by running a user configured saved prompt)
+- [x] It would be cool to have a command pallete command that lets you start a new session for the current note (maybe by running a slash command, or maybe by running a user configured saved prompt)
 - [ ] (blocked until ACP supports model listing) allow model picking, again as a dropdown on/near the chat box
-- [ ] Auth MCP somehow (or switch to socket based)
+- [x] Auth MCP somehow (or switch to socket based)
 - [ ] Allow User specified MCP
-- [x] Allow User to specify the default view (left/right leaf, editor, split)
 - [ ] Granular permission
     - [ ] Support file + folder based white/blacklist
+- [x] Allow User to specify the default view (left/right leaf, editor, split)
 - [x] Document that mobile support is OOS
 - [x] Add hotkey support for:
     - [x] New conversation
@@ -18,12 +18,14 @@ Ideas:
     - *Result*: Implementation requires extensive monkey-patching of private APIs (as seen in `obsidian-show-hidden-files`).
     - *Decision*: Agent access is solved via adapter fallback. UI visibility should be handled by the dedicated `obsidian-show-hidden-files` plugin to avoid code duplication and fragility. Added recommendation to README.
 - [x] Remove git integration
-- [ ] Improve graph knowledge
-    - [ ] Add backlinks to context when adding note
+- [x] Improve graph knowledge
+    - [x] Add backlinks to context when adding note
     - [ ] Enable graph queries, add that to system prompt
-- [ ] Background sessions
-    - [ ]  subscribe to a subset of events, attempt to detect user sentiment and start a session if the user would benefit
 - [ ] Triggers from canvas? Maybe let people add a canvas item and see it "get worked"
-- [ ] Ambient Session
-    - [ ] Requires compaction/special prompting
-    - [ ] subscribe to all events, attempt to detect user sentiment/goals. Suggest "new session to do X" when appropriate
+
+- [ ] Clippy? Is that a horrible idea?
+  - [ ] Background sessions
+      - [ ]  subscribe to a subset of events, attempt to detect user sentiment and start a session if the user would benefit
+  - [ ] Ambient Session
+      - [ ] Requires compaction/special prompting
+      - [ ] subscribe to all events, attempt to detect user sentiment/goals. Suggest "new session to do X" when appropriate

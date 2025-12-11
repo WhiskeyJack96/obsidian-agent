@@ -287,17 +287,17 @@ describe('TriggerManager', () => {
 			// Advance to first timer
 			await vi.advanceTimersByTimeAsync(1000); // Total: 3000ms
 			expect(executeSpy).toHaveBeenCalledTimes(1);
-			expect(executeSpy).toHaveBeenCalledWith(file1, undefined);
+			expect(executeSpy).toHaveBeenCalledWith(file1, '');
 
 			// Advance to second timer
 			await vi.advanceTimersByTimeAsync(1000); // Total: 4000ms
 			expect(executeSpy).toHaveBeenCalledTimes(2);
-			expect(executeSpy).toHaveBeenCalledWith(file2, undefined);
+			expect(executeSpy).toHaveBeenCalledWith(file2, '');
 
 			// Advance to third timer
 			await vi.advanceTimersByTimeAsync(1000); // Total: 5000ms
 			expect(executeSpy).toHaveBeenCalledTimes(3);
-			expect(executeSpy).toHaveBeenCalledWith(file3, undefined);
+			expect(executeSpy).toHaveBeenCalledWith(file3, '');
 		});
 
 		it('should reset timer when same file receives new event', async () => {

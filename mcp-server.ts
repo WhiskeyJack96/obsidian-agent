@@ -24,6 +24,7 @@ export class ObsidianMCPServer {
 	private httpServer: Server | null = null;
 	private obsidianApp: App;
 	private port: number;
+	private authTokens: Set<string> = new Set();
 
 	constructor(config: MCPServerConfig) {
 		this.obsidianApp = config.app;
@@ -225,6 +226,36 @@ export class ObsidianMCPServer {
 	}
 
 	private setupEndpoint() {
+		// Add auth middleware before MCP handler
+		this.expressApp.use('/mcp', (req: Request, res: Response, next) => {
+            const authHeader = req.headers.authorization || '';
+            const lowerAuthHeader = authHeader.toLowerCase();
+
+            // Validate Bearer scheme is present
+            if (!lowerAuthHeader.startsWith('bearer ')) {
+                res.status(401).json({ error: 'Unauthorized' });
+                return;
+            }
+
+            // Extract token and compare case-insensitively
+            const providedToken = authHeader.substring(7).toLowerCase(); // Remove 'Bearer ' prefix
+            let tokenValid = false;
+
+            // Check if provided token matches any valid token (case-insensitive)
+            for (const token of this.authTokens) {
+                if (token.toLowerCase() === providedToken) {
+                    tokenValid = true;
+                    break;
+                }
+            }
+
+            if (!tokenValid) {
+                res.status(401).json({ error: 'Unauthorized' });
+                return;
+            }
+			next();
+		});
+
 		this.expressApp.post('/mcp', async (req: Request, res: Response) => {
 			const transport = new StreamableHTTPServerTransport({
 				sessionIdGenerator: undefined,
@@ -238,6 +269,14 @@ export class ObsidianMCPServer {
 			await this.mcpServer.connect(transport);
 			await transport.handleRequest(req, res, req.body);
 		});
+	}
+
+	addAuthToken(token: string): void {
+		this.authTokens.add(token);
+	}
+
+	removeAuthToken(token: string): void {
+		this.authTokens.delete(token);
 	}
 
 	async start(): Promise<void> {

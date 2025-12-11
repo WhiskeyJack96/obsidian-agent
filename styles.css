@@ -1307,3 +1307,75 @@
 	font-family: var(--font-monospace);
 	font-size: 0.9em;
 }
+
+/* Collapsible JSON Input */
+.acp-input-json {
+	margin: 8px 0;
+	background-color: var(--code-background);
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.acp-input-json-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 12px;
+	background-color: var(--background-secondary);
+	cursor: pointer;
+	user-select: none;
+	transition: background-color 0.2s;
+}
+
+.acp-input-json-header:hover {
+	background-color: var(--background-secondary-alt);
+}
+
+.acp-input-json-toggle {
+	display: inline-block;
+	font-size: 0.9em;
+	color: var(--text-muted);
+	transition: transform 0.2s;
+	width: 16px;
+	text-align: center;
+}
+
+.acp-input-json-label {
+	color: var(--text-muted);
+	font-size: 0.9em;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.acp-input-json-container {
+	transition: max-height 0.3s ease, opacity 0.3s ease;
+	overflow: hidden;
+}
+
+.acp-input-json-container.acp-input-json-collapsed {
+	max-height: 0;
+	opacity: 0;
+}
+
+.acp-input-json-container:not(.acp-input-json-collapsed) {
+	max-height: 500px;
+	opacity: 1;
+}
+
+.acp-input-json pre {
+	margin: 0;
+	padding: 12px;
+	background-color: var(--code-background);
+	font-family: var(--font-monospace);
+	font-size: 0.85em;
+	line-height: 1.4;
+	color: var(--text-normal);
+	overflow-x: auto;
+	user-select: text;
+	cursor: text;
+}
+
+.acp-input-json code {
+	color: var(--text-normal);
+}

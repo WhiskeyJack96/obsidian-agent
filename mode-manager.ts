@@ -91,7 +91,7 @@ export class ModeManager {
 				this.onModeChangeMessage(mode.name);
 			}
 		} catch (err) {
-			new Notice(`Failed to change mode: ${err.message}`);
+			new Notice(`Failed to change mode: ${(err instanceof Error ? err.message : String(err))}`);
 			console.error('Mode change error:', err);
 
 			// Revert dropdown to previous value

@@ -1,8 +1,7 @@
 import { Plugin, WorkspaceLeaf, Notice } from 'obsidian';
-import { ACPClient } from './acp-client';
 import { AgentView, VIEW_TYPE_AGENT } from './agent-view';
 import { PlanView, VIEW_TYPE_PLAN } from './plan-view';
-import { DiffView, VIEW_TYPE_DIFF, DiffData } from './diff-view';
+import { DiffView, VIEW_TYPE_DIFF } from './diff-view';
 import { ACPClientSettingTab } from './settings-tab';
 import { ACPClientSettings, DEFAULT_SETTINGS } from './settings';
 import { Plan } from './types';
@@ -56,8 +55,8 @@ export default class ACPClientPlugin extends Plugin {
 		});
 
 		// Add ribbon icon
-		this.addRibbonIcon('bot', 'Open ACP Agent', () => {
-			this.activateView();
+		this.addRibbonIcon('bot', 'Open ACP agent', () => {
+			void this.activateView();
 		});
 
 		// Add command to open agent view (creates new conversation)
@@ -65,7 +64,7 @@ export default class ACPClientPlugin extends Plugin {
 			id: 'open-agent-view',
 			name: 'Open agent view',
 			callback: () => {
-				this.activateView();
+				void this.activateView();
 			}
 		});
 
@@ -89,7 +88,7 @@ export default class ACPClientPlugin extends Plugin {
 			name: 'New conversation',
 			callback: () => {
 				const view = this.getActiveAgentView();
-				if (view) view.newConversation();
+				if (view) void view.newConversation();
 			}
 		});
 
@@ -149,7 +148,7 @@ export default class ACPClientPlugin extends Plugin {
 			name: 'Cancel operation',
 			callback: () => {
 				const view = this.getActiveAgentView();
-				if (view) view.cancelCurrentTurn();
+				if (view) void view.cancelCurrentTurn();
 			}
 		});
 
@@ -158,7 +157,7 @@ export default class ACPClientPlugin extends Plugin {
 
 		// Start MCP server if enabled
 		if (this.settings.enableMCPServer) {
-			this.startMCPServer();
+			void this.startMCPServer();
 		}
 
 		// Initialize trigger manager
@@ -166,15 +165,15 @@ export default class ACPClientPlugin extends Plugin {
 		this.triggerManager.registerListeners();
 	}
 
-	async onunload() {
+	onunload() {
 		// Clean up trigger manager
 		if (this.triggerManager) {
 			this.triggerManager.cleanup();
 		}
 
-		// Stop MCP server
+		// Stop MCP server (fire and forget - can't await in onunload)
 		if (this.mcpServer) {
-			await this.stopMCPServer();
+			void this.stopMCPServer();
 		}
 	}
 
@@ -214,7 +213,7 @@ export default class ACPClientPlugin extends Plugin {
 		}
 
 		if (leaf) {
-			workspace.revealLeaf(leaf);
+			void workspace.revealLeaf(leaf);
 
 			// If an initial prompt is provided, send it to the view
 			if (initialPrompt) {
@@ -239,7 +238,7 @@ export default class ACPClientPlugin extends Plugin {
 		}
 	}
 
-	async openDiffView(diffData: DiffData): Promise<DiffView | null> {
+	async openDiffView(): Promise<DiffView | null> {
 		const { workspace } = this.app;
 
 		// Get the active leaf or create a new one in the main editor area
@@ -288,7 +287,7 @@ export default class ACPClientPlugin extends Plugin {
 		if (this.mcpServer) {
 			await this.mcpServer.stop();
 			this.mcpServer = null;
-			new Notice('MCP Server stopped');
+			new Notice('MCP server stopped');
 		}
 	}
 }

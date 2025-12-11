@@ -51,14 +51,14 @@ export class TriggerManager {
 		this.plugin.registerEvent(
 			this.vault.on('create', (file) => {
 				if (file instanceof TFile) {
-					this.handleVaultEvent(file, 'created');
+					void this.handleVaultEvent(file, 'created');
 				}
 			})
 		);
 		this.plugin.registerEvent(
 			this.vault.on('modify', (file) => {
 				if (file instanceof TFile) {
-					this.handleVaultEvent(file, 'modified');
+					void this.handleVaultEvent(file, 'modified');
 				}
 			})
 		);
@@ -67,7 +67,7 @@ export class TriggerManager {
 	/**
 	 * Handle vault events with debouncing
 	 */
-	private async handleVaultEvent(file: TFile, event: 'created' | 'modified') {
+	private async handleVaultEvent(file: TFile, _event: 'created' | 'modified') {
 		const filePath = file.path;
 
 		// Skip if metadata triggers are disabled
@@ -100,12 +100,12 @@ export class TriggerManager {
 
 		// Clear existing timer for this file
 		if (this.debounceTimers.has(debounceKey)) {
-			clearTimeout(this.debounceTimers.get(debounceKey)!);
+			clearTimeout(this.debounceTimers.get(debounceKey));
 		}
 
 		// Set new timer
 		const timer = setTimeout(() => {
-			this.executeTrigger(file, prompt );
+			void this.executeTrigger(file, prompt );
 			this.debounceTimers.delete(debounceKey);
 		}, this.plugin.settings.metadataTriggerDebounceMs);
 
@@ -129,7 +129,7 @@ export class TriggerManager {
 
 		} catch (error) {
 			console.error('Error executing trigger:', error);
-			new Notice(`Failed to execute trigger: ${error.message}`);
+			new Notice(`Failed to execute trigger: ${(error instanceof Error ? error.message : String(error))}`);
 		}
 	}
 

@@ -36,7 +36,7 @@ export class MessageRenderer {
 				event.preventDefault();
 				const href = anchor.getAttribute('data-href');
 				if (href) {
-					this.app.workspace.openLinkText(href, '', false);
+					void this.app.workspace.openLinkText(href, '', false);
 				}
 			}
 		});

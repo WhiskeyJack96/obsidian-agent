@@ -61,7 +61,7 @@ export class ToolCallMessage extends Message {
 
 			for (const key of keyArgs) {
 				if (key in rawInput && typeof rawInput[key] === 'string') {
-					argsToShow.push([key, rawInput[key] as string]);
+					argsToShow.push([key, rawInput[key]]);
 				}
 			}
 

@@ -91,7 +91,7 @@ export class AgentView extends ItemView {
 		this.modeManager = new ModeManager(
 			statusBarContainer,
 			(modeName) => {
-				this.addMessage('system', `Mode changed to: ${modeName}`).catch((err) => {
+				void this.addMessage('system', `Mode changed to: ${modeName}`).catch((err) => {
 					console.error('Error adding mode change message:', err);
 				});
 			}
@@ -103,7 +103,7 @@ export class AgentView extends ItemView {
 		});
 		newConversationButton.addEventListener('click', () => {
 			this.newConversation().catch((err) => {
-				new Notice(`Failed to start new conversation: ${err.message}`);
+				new Notice(`Failed to start new conversation: ${(err instanceof Error ? err.message : String(err))}`);
 				console.error('Error in newConversation:', err);
 			});
 		});
@@ -125,7 +125,7 @@ export class AgentView extends ItemView {
 		this.loadSessionButton.addClass('acp-hidden');
 		this.loadSessionButton.addEventListener('click', () => {
 			this.loadExistingSession().catch((err) => {
-				new Notice(`Failed to load session: ${err.message}`);
+				new Notice(`Failed to load session: ${(err instanceof Error ? err.message : String(err))}`);
 				console.error('Error in loadExistingSession:', err);
 			});
 		});
@@ -137,7 +137,7 @@ export class AgentView extends ItemView {
 		this.cancelButton.addClass('acp-hidden');
 		this.cancelButton.addEventListener('click', () => {
 			this.cancelCurrentTurn().catch((err) => {
-				new Notice(`Failed to cancel operation: ${err.message}`);
+				new Notice(`Failed to cancel operation: ${(err instanceof Error ? err.message : String(err))}`);
 				console.error('Error in cancelCurrentTurn:', err);
 			});
 		});
@@ -153,7 +153,7 @@ export class AgentView extends ItemView {
 		this.updateWriteApprovalToggle();
 		this.writeApprovalToggle.addEventListener('click', () => {
 			this.toggleWriteApproval().catch((err) => {
-				new Notice(`Failed to toggle write approval: ${err.message}`);
+				new Notice(`Failed to toggle write approval: ${(err instanceof Error ? err.message : String(err))}`);
 				console.error('Error in toggleWriteApproval:', err);
 			});
 		});
@@ -204,7 +204,7 @@ export class AgentView extends ItemView {
 			// Normal Enter behavior (send message)
 			if (e.key === 'Enter' && !e.shiftKey) {
 				e.preventDefault();
-				this.sendMessage();
+				void this.sendMessage();
 			}
 		});
 
@@ -240,7 +240,7 @@ export class AgentView extends ItemView {
 
 		// Auto-connect when client is set (but only if not already connected)
 		if (this.connectionState === ConnectionState.NOT_CONNECTED) {
-			this.connect();
+			void this.connect();
 		}
 	}
 
@@ -260,7 +260,7 @@ export class AgentView extends ItemView {
 		this.initialPrompt = prompt;
 		// If already connected, send immediately
 		if (this.connectionState === ConnectionState.SESSION_ACTIVE) {
-			this.sendInitialPrompt();
+			void this.sendInitialPrompt();
 		}
 	}
 
@@ -273,16 +273,16 @@ export class AgentView extends ItemView {
 		this.initialPrompt = null; // Clear to prevent duplicate sends
 
 		// Show a visual indicator that this was triggered
-		this.addMessage('system', '🤖 Triggered by metadata');
+		void this.addMessage('system', '🤖 Triggered by metadata');
 
 		// Add user message and send to agent
-		this.addMessage('user', prompt);
+		void this.addMessage('user', prompt);
 		this.startAgentTurn();
 
 		try {
 			await this.client.sendPrompt(prompt);
 		} catch (err) {
-			new Notice(`Failed to send triggered message: ${err.message}`);
+			new Notice(`Failed to send triggered message: ${(err instanceof Error ? err.message : String(err))}`);
 			console.error('Send error:', err);
 			this.endAgentTurn();
 		}
@@ -329,7 +329,7 @@ export class AgentView extends ItemView {
 			// Show session ID to user
 			const sessionId = this.client.getSessionId();
 			if (sessionId) {
-				this.addMessage('system', `Session started. Session ID: ${sessionId}`);
+				void this.addMessage('system', `Session started. Session ID: ${sessionId}`);
 			}
 
 			// Send initial prompt if one was set (e.g., from trigger)
@@ -338,7 +338,7 @@ export class AgentView extends ItemView {
 			}
 		} catch (err) {
 			this.updateConnectionState(ConnectionState.CONNECTION_FAILED);
-			new Notice(`Failed to connect: ${err.message}`);
+			new Notice(`Failed to connect: ${(err instanceof Error ? err.message : String(err))}`);
 			console.error('Connection error:', err);
 		}
 	}
@@ -347,7 +347,7 @@ export class AgentView extends ItemView {
 		if (this.client) {
 			await this.client.cleanup();
 			this.updateConnectionState(ConnectionState.DISCONNECTED);
-			this.addMessage('system', 'Disconnected from agent.');
+			void this.addMessage('system', 'Disconnected from agent.');
 		}
 	}
 
@@ -438,13 +438,13 @@ export class AgentView extends ItemView {
 			await this.client.loadSession(sessionId);
 			this.updateConnectionState(ConnectionState.SESSION_ACTIVE);
 
-			this.addMessage('system', `Successfully loaded session: ${sessionId}`);
+			void this.addMessage('system', `Successfully loaded session: ${sessionId}`);
 
 			// Clear the input field
 			this.sessionIdInput.value = '';
 		} catch (err) {
 			this.updateConnectionState(ConnectionState.CONNECTION_FAILED);
-			new Notice(`Failed to load session: ${err.message}`);
+			new Notice(`Failed to load session: ${(err instanceof Error ? err.message : String(err))}`);
 			console.error('Load session error:', err);
 		}
 	}
@@ -458,9 +458,9 @@ export class AgentView extends ItemView {
 		try {
 			await this.client.cancelSession();
 			this.endAgentTurn();
-			this.addMessage('system', 'Agent turn cancelled.');
+			void this.addMessage('system', 'Agent turn cancelled.');
 		} catch (err) {
-			new Notice(`Failed to cancel: ${err.message}`);
+			new Notice(`Failed to cancel: ${(err instanceof Error ? err.message : String(err))}`);
 			console.error('Cancel error:', err);
 		}
 	}
@@ -476,7 +476,7 @@ export class AgentView extends ItemView {
 			return;
 		}
 
-		this.addMessage('user', message);
+		void this.addMessage('user', message);
 		this.inputField.value = '';
 
 		this.startAgentTurn();
@@ -484,7 +484,7 @@ export class AgentView extends ItemView {
 		try {
 			await this.client.sendPrompt(message);
 		} catch (err) {
-			new Notice(`Failed to send message: ${err.message}`);
+			new Notice(`Failed to send message: ${(err instanceof Error ? err.message : String(err))}`);
 			console.error('Send error:', err);
 			this.endAgentTurn();
 		}
@@ -497,7 +497,7 @@ export class AgentView extends ItemView {
 			// Save conversation to file if tracking enabled
 			if (this.plugin.settings.enableConversationTracking) {
 				this.saveConversationToFile().catch((err) => {
-					new Notice(`Failed to save conversation: ${err.message}`);
+					new Notice(`Failed to save conversation: ${(err instanceof Error ? err.message : String(err))}`);
 					console.error('Conversation tracking error:', err);
 				});
 			}
@@ -524,7 +524,7 @@ export class AgentView extends ItemView {
 
 		// Handle plan updates (direct plan data)
 		if (update.type === 'plan') {
-			this.plugin.openPlanView(update.data);
+			void this.plugin.openPlanView(update.data);
 			return;
 		}
 
@@ -537,27 +537,27 @@ export class AgentView extends ItemView {
 
 			// Handle agent message chunks (streaming text)
 			if (updateType === 'agent_message_chunk' && updateData.content) {
-				this.appendToLastAgentMessage(updateData.content);
+				void this.appendToLastAgentMessage(updateData.content);
 				return
 			}
 			else if (updateType === 'agent_thought_chunk' && updateData.content) {
-				this.appendToLastAgentThought(updateData.content);
+				void this.appendToLastAgentThought(updateData.content);
 				return
 			}
 			else if (updateType === 'available_commands_update' && updateData.availableCommands) {
-				this.showAvailableCommands(updateData.availableCommands);
+				void this.showAvailableCommands(updateData.availableCommands);
 				return
 			}
 			else if (updateType === 'tool_call') {
-				this.handleToolCallUpdate(updateData);
+				void this.handleToolCallUpdate(updateData);
 				return
 			}
 			else if (updateType === 'tool_call_update') {
-				this.handleToolCallUpdate(updateData);
+				void this.handleToolCallUpdate(updateData);
 				return
 			}
 			else if (updateType === 'plan' && updateData.entries) {
-				this.plugin.openPlanView(updateData);
+				void this.plugin.openPlanView(updateData);
 				return
 			}
 			else if (updateType === 'current_mode_update' && updateData.currentModeId) {
@@ -586,7 +586,7 @@ export class AgentView extends ItemView {
 
 
 	private startAgentTurn(): void {
-		this.messageRenderer.addMessage(new PendingMessage('pending', this.component));
+		void this.messageRenderer.addMessage(new PendingMessage('pending', this.component));
 		this.cancelButton.removeClass('acp-hidden');
 	}
 
@@ -621,18 +621,18 @@ export class AgentView extends ItemView {
 
 		// Wrap resolve to re-add pending message after user responds
 		const wrappedResolve = (response: RequestPermissionResponse) => {
-			this.messageRenderer.addMessage(new PendingMessage('pending', this.component));
+			void this.messageRenderer.addMessage(new PendingMessage('pending', this.component));
 			resolve(response);
 		};
 
 		const message = new PermissionRequestMessage(permissionId, params, wrappedResolve, this.component);
-		this.messageRenderer.addMessage(message);
+		void this.messageRenderer.addMessage(message);
 	}
 
 	private showDebugMessage(data: unknown): void {
 		const debugId = `debug-${Date.now()}`;
 		const message = new DebugMessage(debugId, data, this.component);
-		this.messageRenderer.addMessage(message);
+		void this.messageRenderer.addMessage(message);
 	}
 
 	async addMessage(sender: 'user' | 'agent' | 'system', content: string): Promise<void> {

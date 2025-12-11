@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice, TFolder } from 'obsidian';
+import { App, PluginSettingTab, Setting } from 'obsidian';
 import ACPClientPlugin from './main';
 
 export class ACPClientSettingTab extends PluginSettingTab {
@@ -17,7 +17,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName('ACP Client Settings').setHeading();
 
 		new Setting(containerEl)
-			.setName('Agent Command')
+			.setName('Agent command')
 			.setDesc('Path to the agent executable (e.g., /usr/local/bin/claude-code)')
 			.addText(text => text
 				.setPlaceholder('/path/to/agent')
@@ -28,7 +28,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Agent Arguments')
+			.setName('Agent arguments')
 			.setDesc('Arguments to pass to the agent (comma-separated)')
 			.addText(text => text
 				.setPlaceholder('--arg1, --arg2')
@@ -42,20 +42,20 @@ export class ACPClientSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Default View Location')
+			.setName('Default view location')
 			.setDesc('Where to open the agent view by default')
 			.addDropdown(dropdown => dropdown
-				.addOption('right-sidebar', 'Right Sidebar')
-				.addOption('left-sidebar', 'Left Sidebar')
-				.addOption('tab', 'New Tab (Main Area)')
-				.addOption('split', 'Split (Main Area)')
+				.addOption('right-sidebar', 'Right sidebar')
+				.addOption('left-sidebar', 'Left sidebar')
+				.addOption('tab', 'New tab (main area)')
+				.addOption('split', 'Split (main area)')
 				.setValue(this.plugin.settings.defaultViewType)
 				.onChange(async (value) => {
 					this.plugin.settings.defaultViewType = value as 'right-sidebar' | 'left-sidebar' | 'tab' | 'split';
 					await this.plugin.saveSettings();
 				}));
 		new Setting(containerEl)
-			.setName('Auto-approve Write Permission')
+			.setName('Auto-approve write permission')
 			.setDesc('Automatically approve file write/edit requests from the agent')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.autoApproveWritePermission)
@@ -67,10 +67,10 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
 
 		// Conversation Tracking section
-		new Setting(containerEl).setName('Conversation Tracking').setHeading();
+		new Setting(containerEl).setName('Conversation tracking').setHeading();
 
 		new Setting(containerEl)
-			.setName('Enable Conversation Tracking')
+			.setName('Enable conversation tracking')
 			.setDesc('Automatically save all conversation messages to markdown files')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableConversationTracking)
@@ -80,7 +80,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Conversation Folder')
+			.setName('Conversation folder')
 			.setDesc('Folder path where conversation files will be saved (e.g., "conversations/")')
 			.addText(text => text
 				.setPlaceholder('conversations/')
@@ -91,7 +91,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 				}));
 
 		// Alpha Features section
-		new Setting(containerEl).setName('Alpha Features').setHeading();
+		new Setting(containerEl).setName('Alpha features').setHeading();
 
 		const alphaWarningContainer = containerEl.createDiv({ cls: 'acp-alpha-warning-container setting-item-description' });
 		const strong = alphaWarningContainer.createEl('strong');
@@ -100,7 +100,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
 		// Obsidian Focussed Prompt
 		const obsidianPromptSetting = new Setting(containerEl)
-			.setName('Obsidian Focussed Prompt')
+			.setName('Obsidian focussed prompt')
 			.setDesc('Enable Obsidian-specific context in agent prompts')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.obsidianFocussedPrompt)
@@ -114,7 +114,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName('MCP Server').setHeading().settingEl.addClass('acp-alpha-section-header');
 
 		const mcpEnableSetting = new Setting(containerEl)
-			.setName('Enable MCP Server')
+			.setName('Enable MCP server')
 			.setDesc('Start an embedded MCP server that exposes Obsidian commands. The ACP agent can connect to this server to execute Obsidian commands.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableMCPServer)
@@ -132,7 +132,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		mcpEnableSetting.settingEl.addClass('acp-setting-alpha-border');
 
 		const mcpPortSetting = new Setting(containerEl)
-			.setName('MCP Server Port')
+			.setName('MCP server port')
 			.setDesc('Port number for the MCP server (requires restart if server is running)')
 			.addText(text => text
 				.setPlaceholder('3100')
@@ -163,7 +163,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
 		// Enable metadata triggers toggle
 		new Setting(containerEl)
-			.setName('Enable Metadata Triggers')
+			.setName('Enable metadata triggers')
 			.setDesc('When enabled, files with "acp-trigger: true" in frontmatter will automatically spawn an agent session')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableMetadataTriggers)
@@ -174,7 +174,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
 		// Debounce timeout
 		new Setting(containerEl)
-			.setName('Trigger Debounce (ms)')
+			.setName('Trigger debounce (ms)')
 			.setDesc('Wait time before triggering after file changes (default: 3000ms)')
 			.addText(text => text
 				.setPlaceholder('3000')

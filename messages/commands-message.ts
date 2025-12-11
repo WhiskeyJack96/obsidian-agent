@@ -35,7 +35,7 @@ export class CommandsMessage extends Message {
 	}
 
 	private renderCommandList(contentEl: HTMLElement): void {
-		contentEl.createEl('strong', { text: 'Available Commands:' });
+		contentEl.createEl('strong', { text: 'Available commands:' });
 		const commandList = contentEl.createEl('ul', { cls: 'acp-command-list' });
 
 		for (const cmd of this.commands) {

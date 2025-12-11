@@ -1,3 +1,4 @@
+
 import { vi } from 'vitest';
 
 // Mock Obsidian's DOM extensions
@@ -37,9 +38,9 @@ if (typeof HTMLElement !== 'undefined') {
         if (params?.value) (el as any).value = params.value;
         this.appendChild(el);
 
-        if (callback) callback(el as HTMLElementTagNameMap[K]);
+        if (callback) callback(el);
 
-        return el as HTMLElementTagNameMap[K];
+        return el;
     };
 
     HTMLElement.prototype.empty = function() {

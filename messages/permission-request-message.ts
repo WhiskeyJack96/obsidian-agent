@@ -26,7 +26,7 @@ export class PermissionRequestMessage extends Message {
 
 		// Show what permission is being requested
 		const headerEl = contentEl.createDiv({ cls: 'acp-permission-header' });
-		headerEl.createEl('strong', { text: '🔐 Permission Required' });
+		headerEl.createEl('strong', { text: '🔐 Permission required' });
 
 		if (this.params.toolCall && this.params.toolCall.title) {
 			const titleEl = contentEl.createDiv({ cls: 'acp-permission-tool-title' });
@@ -50,7 +50,7 @@ export class PermissionRequestMessage extends Message {
 
 			for (const key of keyArgs) {
 				if (key in rawInput && typeof rawInput[key] === 'string') {
-					argsToShow.push([key, rawInput[key] as string]);
+					argsToShow.push([key, rawInput[key]]);
 				}
 			}
 

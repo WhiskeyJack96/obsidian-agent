@@ -28,7 +28,7 @@ export class ThoughtMessage extends Message {
 
 		// Label
 		const labelEl = this.headerEl.createSpan({ cls: 'acp-thought-label' });
-		labelEl.setText('Agent Thought');
+		labelEl.setText('Agent thought');
 
 		// Toggle button
 		const toggleEl = this.headerEl.createSpan({ cls: 'acp-thought-toggle' });

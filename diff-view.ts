@@ -58,7 +58,7 @@ export class DiffView extends ItemView {
 		// Create header
 		const header = container.createDiv({ cls: 'acp-diff-header' });
 		const titleContainer = header.createDiv({ cls: 'acp-diff-title-container' });
-		titleContainer.createEl('strong', { text: 'Review Edit Request' });
+		titleContainer.createEl('strong', { text: 'Review edit request' });
 
 		if (this.diffData) {
 			const pathEl = titleContainer.createDiv({ cls: 'acp-diff-file-path' });

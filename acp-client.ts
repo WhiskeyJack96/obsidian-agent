@@ -2,7 +2,7 @@ import { spawn, ChildProcess } from 'child_process';
 import { ClientSideConnection, ndJsonStream, Client, Agent, AgentCapabilities } from '@agentclientprotocol/sdk';
 import { Readable as NodeReadable, Writable as NodeWritable } from 'stream';
 import { ReadableStream, WritableStream } from 'stream/web';
-import { App, Notice, FileSystemAdapter, TFile } from 'obsidian';
+import { App, Notice, FileSystemAdapter } from 'obsidian';
 import { ACPClientSettings } from './settings';
 import * as schema from '@agentclientprotocol/sdk';
 import type ACPClientPlugin from './main';
@@ -56,7 +56,7 @@ export class ACPClient {
 			console.error('Agent process error:', err);
 		});
 
-		this.process.on('exit', (code) => {
+		this.process.on('exit', () => {
 			// Note: This handler is removed during intentional cleanup to prevent race conditions
 			// It only fires when the process exits unexpectedly
 			this.cleanup().catch((err) => {
@@ -104,7 +104,7 @@ export class ACPClient {
 
 		// Create ClientSideConnection with proper signature
 		this.connection = new ClientSideConnection(
-			(agent: Agent): Client => {
+			(_agent: Agent): Client => {
 				return {
 					requestPermission: this.handleRequestPermission.bind(this),
 					sessionUpdate: this.handleSessionUpdate.bind(this),
@@ -347,14 +347,13 @@ export class ACPClient {
 
 			// Add backlinks to the content for context
 			let contextContent = content;
-			// @ts-ignore - getBacklinksForFile is not in the types yet
+			// @ts-expect-error - getBacklinksForFile is not in the types yet
 			if (this.app.metadataCache.getBacklinksForFile) {
-				// @ts-ignore
+				// @ts-expect-error - Obsidian internal API for backlinks
 				const backlinks = this.app.metadataCache.getBacklinksForFile(file);
 				if (backlinks && backlinks.data && backlinks.data.size > 0) {
 					contextContent += '\n\n<!-- Backlinks (Added by ACP) -->\n# Backlinks\n';
 					const files = Array.from(backlinks.data.keys());
-					// @ts-ignore
 					files.forEach((path: string) => {
 						contextContent += `- [[${path}]]\n`;
 					});
@@ -400,7 +399,7 @@ export class ACPClient {
 				};
 
 				// Open diff view and wait for user approval
-				const diffView = await this.plugin.openDiffView(diffData);
+				const diffView = await this.plugin.openDiffView();
 				if (!diffView) {
 					throw new Error('Failed to open diff view');
 				}
@@ -428,7 +427,7 @@ export class ACPClient {
 				// Fallback to adapter.write if creation via vault fails (e.g. dotfiles)
 				try {
 					await this.app.vault.create(relativePath, contentToWrite);
-				} catch (err) {
+				} catch {
 					// If normal create fails, try adapter write directly
 					// This handles cases like .gitignore where Obsidian might block it or path validation fails
 					await this.app.vault.adapter.write(relativePath, contentToWrite);

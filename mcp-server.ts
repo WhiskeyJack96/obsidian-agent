@@ -112,7 +112,7 @@ export class ObsidianMCPServer {
 					message: z.string()
 				}
 			},
-			async ({ commandId }: { commandId: string }) => {
+			({ commandId }: { commandId: string }) => {
 				try {
 					// Verify command exists
 					const commands: Command[] = (this.obsidianApp as ObsidianApp).commands.listCommands();
@@ -187,7 +187,7 @@ export class ObsidianMCPServer {
 					results: z.array(z.string())
 				}
 			},
-			async ({ query }: { query: string }) => {
+			({ query }: { query: string }) => {
 				try {
 					const files = this.obsidianApp.vault.getMarkdownFiles();
 					const results = files
@@ -230,7 +230,7 @@ export class ObsidianMCPServer {
 			});
 
 			res.on('close', () => {
-				transport.close();
+				void transport.close();
 			});
 
 			await this.mcpServer.connect(transport);
@@ -250,7 +250,7 @@ export class ObsidianMCPServer {
 					reject(error);
 				});
 			} catch (error) {
-				reject(error);
+				reject(error instanceof Error ? error : new Error(String(error)));
 			}
 		});
 	}

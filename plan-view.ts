@@ -16,7 +16,7 @@ export class PlanView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return 'Agent Plan';
+		return 'Agent plan';
 	}
 
 	getIcon(): string {
@@ -31,7 +31,7 @@ export class PlanView extends ItemView {
 		container.addClass('acp-plan-view');
 
 		const header = container.createDiv({ cls: 'acp-plan-header' });
-		header.createEl('strong', { text: 'Agent Plan' });
+		header.createEl('strong', { text: 'Agent plan' });
 
 		this.planContainer = container.createDiv({ cls: 'acp-plan-entries' });
 		this.updatePlanDisplay();

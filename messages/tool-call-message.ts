@@ -1,4 +1,4 @@
-import { Component } from 'obsidian';
+import {App, Component} from 'obsidian';
 import { Message } from './base-message';
 import { ToolCallUpdate } from '../types';
 
@@ -11,8 +11,8 @@ export class ToolCallMessage extends Message {
 	private permissionsEl: HTMLElement | null = null;
 	private messageEl: HTMLElement | null = null;
 
-	constructor(id: string, data: ToolCallUpdate, component: Component) {
-		super(id, component);
+    constructor(app:App, id: string, data: ToolCallUpdate, component: Component) {
+		super(app, id, component);
 		this.data = data;
 	}
 

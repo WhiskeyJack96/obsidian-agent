@@ -1,4 +1,4 @@
-import { Component } from 'obsidian';
+import { Component, App } from 'obsidian';
 import { AvailableCommand, ToolCallUpdate } from '../types';
 
 /**
@@ -13,11 +13,13 @@ export type MessageUpdateData = string | AvailableCommand[] | Partial<ToolCallUp
 export abstract class Message {
 	id: string;
 	timestamp: Date;
+    app: App;
 	protected element: HTMLElement | null = null;
 	protected component: Component;
 
-	constructor(id: string, component: Component) {
+	protected constructor(app: App, id: string, component: Component) {
 		this.id = id;
+        this.app = app;
 		this.timestamp = new Date();
 		this.component = component;
 	}

@@ -131,7 +131,7 @@ export class MessageRenderer {
 			// Create new agent message if we don't have one
 			if (!this.currentAgentMessageId) {
 				this.currentAgentMessageId = `agent-${Date.now()}`;
-				const message = new TextMessage(this.currentAgentMessageId, 'agent', '', this.component);
+				const message = new TextMessage(this.app, this.currentAgentMessageId, 'agent', '', this.component);
 				await this.addMessage(message);
 			}
 
@@ -172,7 +172,7 @@ export class MessageRenderer {
 			await this.updateMessage(this.commandsMessageId, commands);
 		} else {
 			this.commandsMessageId = 'commands';
-			const message = new CommandsMessage(this.commandsMessageId, commands, this.component);
+			const message = new CommandsMessage(this.app, this.commandsMessageId, commands, this.component);
 			await this.addMessage(message);
 		}
 	}
@@ -210,7 +210,7 @@ export class MessageRenderer {
 			await this.updateMessage(toolCallId, mergedData);
 		} else {
 			// Create new message for this tool call
-			const message = new ToolCallMessage(toolCallId, mergedData, this.component);
+			const message = new ToolCallMessage(this.app, toolCallId, mergedData, this.component);
 			await this.addMessage(message);
 		}
 	}
@@ -230,7 +230,7 @@ export class MessageRenderer {
 			// Create new thought message if we don't have one
 			if (!this.currentThoughtMessageId) {
 				this.currentThoughtMessageId = `thought-${Date.now()}`;
-				const message = new ThoughtMessage(this.currentThoughtMessageId, '', this.component);
+				const message = new ThoughtMessage(this.app, this.currentThoughtMessageId, '', this.component);
 				await this.addMessage(message);
 			}
 

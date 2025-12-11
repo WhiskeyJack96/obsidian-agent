@@ -1,8 +1,9 @@
 import js from "@eslint/js";
+import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 import obsidianmd from "eslint-plugin-obsidianmd";
 
-export default tseslint.config(
+export default defineConfig(
 	js.configs.recommended,
 	...tseslint.configs.recommendedTypeChecked,
 	{
@@ -23,11 +24,15 @@ export default tseslint.config(
 			"obsidianmd/detach-leaves": "error",
 			"obsidianmd/commands/no-default-hotkeys": "error",
 			"obsidianmd/ui/sentence-case": ["warn", {
-				acronyms: ["ACP", "MCP", "ID"],
+				acronyms: ["MCP", "ID"],
 			}],
 			"obsidianmd/settings-tab/no-manual-html-headings": "error",
 			"obsidianmd/no-sample-code": "warn",
 			// TypeScript ESLint rules
+			"@typescript-eslint/no-unused-vars": ["error", {
+				argsIgnorePattern: "^_",
+				varsIgnorePattern: "^_",
+			}],
 			"@typescript-eslint/no-explicit-any": "error",
 			"@typescript-eslint/require-await": "error",
 			"@typescript-eslint/no-floating-promises": "error",

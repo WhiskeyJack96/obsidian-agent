@@ -1,4 +1,4 @@
-import { Component } from 'obsidian';
+import {App, Component} from 'obsidian';
 import { Message } from './base-message';
 import { AvailableCommand } from '../types';
 
@@ -8,8 +8,8 @@ import { AvailableCommand } from '../types';
 export class CommandsMessage extends Message {
 	private commands: AvailableCommand[];
 
-	constructor(id: string, commands: AvailableCommand[], component: Component) {
-		super(id, component);
+	constructor(app:App, id: string, commands: AvailableCommand[], component: Component) {
+		super(app, id, component);
 		this.commands = commands;
 	}
 

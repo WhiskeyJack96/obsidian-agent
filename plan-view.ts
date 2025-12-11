@@ -23,8 +23,7 @@ export class PlanView extends ItemView {
 		return 'list-checks';
 	}
 
-	// Obsidian API requires Promise<void> return type, but onOpen only does synchronous DOM setup
-	// eslint-disable-next-line @typescript-eslint/require-await
+	// eslint-disable-next-line @typescript-eslint/require-await -- Obsidian API requires Promise<void> return type, but onOpen only does synchronous DOM setup
 	async onOpen(): Promise<void> {
 		const container = this.containerEl.children[1];
 		container.empty();

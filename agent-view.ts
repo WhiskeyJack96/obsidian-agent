@@ -65,8 +65,7 @@ export class AgentView extends ItemView {
         return 'bot';
     }
 
-    // Obsidian API requires Promise<void> return type, but onOpen only does synchronous DOM setup
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- Obsidian API requires Promise<void> return type, but onOpen only does synchronous DOM setup
     async onOpen(): Promise<void> {
         const container = this.containerEl.children[1];
         container.empty();
@@ -575,7 +574,7 @@ export class AgentView extends ItemView {
 
 
     private startAgentTurn(): void {
-        void this.messageRenderer.addMessage(new PendingMessage('pending', this.component));
+        void this.messageRenderer.addMessage(new PendingMessage(this.app, 'pending', this.component));
         this.cancelButton.removeClass('acp-hidden');
     }
 
@@ -610,7 +609,7 @@ export class AgentView extends ItemView {
 
         // Apply permission UI inline to the tool call message
         const wrappedResolve = (optionId: string) => {
-            void this.messageRenderer.addMessage(new PendingMessage('pending', this.component));
+            void this.messageRenderer.addMessage(new PendingMessage(this.app,'pending', this.component));
             resolve({
                 outcome: {
                     outcome: 'selected',
@@ -630,7 +629,7 @@ export class AgentView extends ItemView {
 
     private showDebugMessage(data: unknown): void {
         const debugId = `debug-${Date.now()}`;
-        const message = new DebugMessage(debugId, data, this.component);
+        const message = new DebugMessage(this.app, debugId, data, this.component);
         void this.messageRenderer.addMessage(message);
     }
 
@@ -642,7 +641,7 @@ export class AgentView extends ItemView {
         }
 
         const messageId = `${sender}-${Date.now()}-${Math.random()}`;
-        const message = new TextMessage(messageId, sender, content, this.component);
+        const message = new TextMessage(this.app, messageId, sender, content, this.component);
 
         await this.messageRenderer.addMessage(message);
     }

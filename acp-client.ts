@@ -112,7 +112,6 @@ export class ACPClient {
 
         // Create ClientSideConnection with proper signature
         this.connection = new ClientSideConnection(
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             (_agent: Agent): Client => {
                 return {
                     requestPermission: this.handleRequestPermission.bind(this) as Client['requestPermission'],
@@ -191,13 +190,13 @@ export class ACPClient {
         if (!this.settings.enableMCPServer) {
             return []
         }
-        
+
         // If MCP server is enabled but plugin.mcpServer doesn't exist, still return empty
         // (will be gracefully handled)
         if (!this.plugin.mcpServer) {
             return []
         }
-        
+
         // Generate new token for this session
         this.mcpAuthToken = randomBytes(32).toString('hex');
         this.plugin.mcpServer.addAuthToken(this.mcpAuthToken);
@@ -342,8 +341,7 @@ export class ACPClient {
     }
 
     // Client method implementations
-    // Protocol requires async signature even though no await is needed
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await --  Protocol requires async signature even though no await is needed
     private async handleSessionUpdate(params: schema.SessionNotification): Promise<void> {
         if (this.updateCallback) {
             this.updateCallback({
@@ -494,8 +492,7 @@ export class ACPClient {
         };
     }
 
-    // Protocol requires async signature even though no await is needed
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await --  Protocol requires async signature even though no await is needed
     private async handleTerminalCreate(params: schema.CreateTerminalRequest): Promise<schema.CreateTerminalResponse> {
         const terminalId = crypto.randomUUID();
 
@@ -545,8 +542,7 @@ export class ACPClient {
         return {terminalId};
     }
 
-    // Protocol requires async signature even though no await is needed
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await --  Protocol requires async signature even though no await is needed
     private async handleTerminalOutput(params: schema.TerminalOutputRequest): Promise<schema.TerminalOutputResponse> {
         const terminal = this.terminals.get(params.terminalId);
         if (!terminal) {
@@ -571,8 +567,7 @@ export class ACPClient {
         return response;
     }
 
-    // Protocol requires async signature even though no await is needed
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await --  Protocol requires async signature even though no await is needed
     private async handleTerminalKill(params: schema.KillTerminalCommandRequest): Promise<schema.KillTerminalCommandResponse | void> {
         const terminal = this.terminals.get(params.terminalId);
         if (!terminal) {
@@ -582,8 +577,7 @@ export class ACPClient {
         terminal.process.kill();
     }
 
-    // Protocol requires async signature even though no await is needed
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await --  Protocol requires async signature even though no await is needed
     private async handleTerminalRelease(params: schema.ReleaseTerminalRequest): Promise<schema.ReleaseTerminalResponse | void> {
         const terminal = this.terminals.get(params.terminalId);
         if (terminal) {

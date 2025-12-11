@@ -62,8 +62,7 @@ export class ObsidianMCPServer {
 					}))
 				}
 			},
-			// MCP SDK requires async signature even though this handler is synchronous
-			// eslint-disable-next-line @typescript-eslint/require-await
+			// eslint-disable-next-line @typescript-eslint/require-await -- MCP SDK requires async signature even though this handler is synchronous
 			async () => {
 				try {
 					// Get all commands from Obsidian

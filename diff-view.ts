@@ -48,8 +48,7 @@ export class DiffView extends ItemView {
 		return parts[parts.length - 1] || this.diffData.path;
 	}
 
-	// Obsidian API requires Promise<void> return type, but onOpen only does synchronous DOM setup
-	// eslint-disable-next-line @typescript-eslint/require-await
+	// eslint-disable-next-line @typescript-eslint/require-await -- Obsidian API requires Promise<void> return type, but onOpen only does synchronous DOM setup
 	async onOpen(): Promise<void> {
 		const container = this.containerEl.children[1];
 		container.empty();
@@ -175,8 +174,7 @@ export class DiffView extends ItemView {
 		this.leaf.detach();
 	}
 
-	// Obsidian's ItemView requires async signature even though cleanup is synchronous
-	// eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- Obsidian's ItemView requires async signature even though cleanup is synchronous
 	async onClose(): Promise<void> {
 		// Destroy editor view
 		if (this.editorView) {

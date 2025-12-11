@@ -1,4 +1,4 @@
-import { Component } from 'obsidian';
+import {App, Component} from 'obsidian';
 import { Message } from './base-message';
 
 /**
@@ -7,8 +7,8 @@ import { Message } from './base-message';
 export class DebugMessage extends Message {
 	private data: unknown;
 
-	constructor(id: string, data: unknown, component: Component) {
-		super(id, component);
+	constructor(app: App, id: string, data: unknown, component: Component) {
+		super(app, id, component);
 		this.data = data;
 	}
 

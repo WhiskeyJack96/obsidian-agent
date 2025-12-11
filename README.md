@@ -1,194 +1,593 @@
-# Obsidian ACP Client Plugin
+# Obsidian ACP Client
 
-An Obsidian plugin that implements an Agent Client Protocol (ACP) client, enabling integration with AI coding agents that support the ACP standard.
+> Transform your Obsidian vault into a powerful AI coding workspace
 
-## Recommended Plugins
+An Obsidian plugin that brings AI coding agents directly into your vault through the Agent Client Protocol (ACP). Chat with AI agents that can read, write, and modify files while you maintain full control over permissions.
 
-To get the most out of ACP Client, we recommend the following plugins:
+![Platform](https://img.shields.io/badge/platform-Desktop%20Only-blue) ![ACP](https://img.shields.io/badge/ACP-Compatible-green)
 
-- **[Show Hidden Files](https://github.com/polyipseity/obsidian-show-hidden-files)**: Required if you want to see dotfiles (like `.env`, `.gitignore`) in the Obsidian file explorer. ACP Client can access these files regardless, but this plugin makes them visible to you.
-- **[Git](https://github.com/vincent-github/obsidian-git)**: For version control.
+![Demo](./demo.gif)
 
-## Compatibility
+## Why Use This Plugin?
 
-This plugin is designed for **Desktop only** (Windows, macOS, Linux) as it requires access to local executables and child processes which are not available on mobile devices (iOS, Android).
+- **Work Where You Think**: Keep your notes, documentation, and code in one place while collaborating with AI agents
+- **Full File System Access**: Agents can read and modify files in your vault with granular permission control
+- **Terminal Integration**: Execute commands and run scripts directly through agent conversations
+- **Protocol-Based**: Uses the open Agent Client Protocol standard, compatible with multiple AI providers
 
 ## Quick Start
 
+### Agent Compatibility
+
+| Agent | Status | Setup |
+|-------|--------|-------|
+| [Claude Code](https://docs.claude.com/claude-code) | ✅ Tested | [Setup instructions](#claude-code) |
+| [Gemini CLI](https://github.com/google/generative-ai-cli) | ✅ Tested | [Setup instructions](#gemini-cli) |
+| [OpenCode](https://github.com/OpenCodeLab/opencode) | ✅ Tested | [Setup instructions](#opencode) |
+| [Mistral](https://mistral.ai/) | ✅ Tested | [Setup instructions](#mistral) |
+
+## Core Features
+
+### 🤖 Agent Communication
+- Full Agent Client Protocol (ACP) implementation
+- Real-time streaming responses
+- Multi-turn conversation sessions
+- Mode switching support (chat, code, etc.)
+
+### 📁 File Operations
+- Read and write files in your vault
+- Automatic backlinks metadata injection
+- Side-by-side diff view for edits before approval
+- Support for hidden/dotfiles
+
+### 💻 Terminal Support
+- Execute shell commands through agent requests
+- Real-time output streaming
+- Process management (create, monitor, kill)
+- Full environment variable support
+
+### 🔗 Obsidian Integration
+- Native vault file access
+- Command palette integration
+- Metadata-based automation [⚠️ ALPHA]
+- MCP server for Obsidian commands [⚠️ ALPHA]
+
+### 🎨 User Experience
+- Inline chat interface with markdown rendering
+- Smart autocomplete (`/` for commands, `@` for files)
+- Real-time tool call visibility with status badges
+- Multiple simultaneous agent sessions
+- Auto-save conversation history
+
+### 🔐 Security & Control
+- Granular permission system with inline approval
+- Auto-approve options for trusted operations
+- Clear visibility of all agent actions
+- Manual command review before execution
+
+## Agent Setup
+
 ### Claude Code
-- First install and auth with claude code - https://docs.claude.com/en/docs/claude-code/overview#install-and-authenticate
-- Then install the acp adaptor for claude code - `npm install -g @zed-industries/claude-code-acp`
-- Then set the "Agent Command" to the full path to the adaptor which you can get by running: `which claude-code-acp`
+
+Claude Code is Anthropic's official CLI agent with excellent ACP support.
+
+**Installation:**
+```bash
+# Install and authenticate Claude Code
+npm install -g @anthropics/claude-code
+claude-code auth
+
+# Install the ACP adapter
+npm install -g @zed-industries/claude-code-acp
+```
+
+**Configuration:**
+1. Get the adapter path: `which claude-code-acp`
+2. In Obsidian Settings → ACP Client:
+   - **Agent Command**: Paste the full path from step 1
+   - **Agent Arguments**: Leave empty
+
+**Known Issues:**
+- Ensure you're authenticated before using the adapter
 
 ### Gemini CLI
-COMING SOON! If you get this working let me know and we can tag team the docs :D 
 
-## Features
+> **Note**: Setup instructions coming soon! If you have this working, please contribute documentation.
 
-![](./demo.gif)
+**Installation:**
+```bash
+# Placeholder - user will provide details
+```
 
-- **ACP Client Implementation**: Full implementation of the Agent Client Protocol specification
-- **Agent Communication**: Connect to and interact with ACP-compatible agents
-- **File System Access**: Agents can read and write files in your vault (with permission)
-- **Terminal Support**: Execute commands through the agent's terminal interface
-- **Session Management**: Create and manage conversation sessions with agents
-- **Permission Control**: Granular permission system with inline approval UI
-- **Chat Interface**: User-friendly chat view with markdown support
-- **Smart Autocomplete**:
-  - Type `/` to autocomplete agent slash commands
-  - Type `@` to autocomplete vault files
-- **Auto-Connect**: Automatically connects when opening the agent view
-- **Tool Call Visibility**: Real-time display of agent tool calls with status indicators
+**Configuration:**
+1. Agent Command: (path to executable)
+2. Agent Arguments: (if needed)
 
-## ⚠️ Security Warning
+**Known Issues:**
+- TBD
 
-> [!CAUTION] Carefully Inspect Bash Commands
-> AI agents can execute terminal commands on your system through this plugin. **Always carefully review and understand any bash commands before approving them.** Commands run with the same permissions as Obsidian and can modify files, install software, or access your system. When in doubt, deny permission requests and manually execute commands yourself.
+### OpenCode
+
+> **Note**: Setup instructions coming soon! If you have this working, please contribute documentation.
+
+**Installation:**
+```bash
+# Placeholder - user will provide details
+```
+
+**Configuration:**
+1. Agent Command: (path to executable)
+2. Agent Arguments: (if needed)
+
+**Known Issues:**
+- TBD
+
+### Mistral
+
+> **Note**: Setup instructions coming soon! If you have this working, please contribute documentation.
+
+**Installation:**
+```bash
+# Placeholder - user will provide details
+```
+
+**Configuration:**
+1. Agent Command: (path to executable)
+2. Agent Arguments: (if needed)
+
+**Known Issues:**
+- TBD
 
 ## Installation
 
-### Development Installation
+### From Community Plugins (Recommended)
 
-1. Copy the plugin folder to your vault's `.obsidian/plugins/` directory
-2. Navigate to the plugin directory:
-   ```bash
-   cd .obsidian/plugins/acp-client
-   ```
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-4. Build the plugin:
-   ```bash
-   npm run build
-   ```
-5. Enable the plugin in Obsidian Settings → Community Plugins
+> **Note**: This plugin is not yet available in the Community Plugins store. Coming soon!
 
 ### Manual Installation
 
-1. Download the latest release
-2. Extract `main.js`, `manifest.json`, and `styles.css` to `.obsidian/plugins/acp-client/`
-3. Reload Obsidian
-4. Enable the plugin in Settings → Community Plugins
+1. Download the latest release from [GitHub Releases](../../releases)
+2. Extract `main.js`, `manifest.json`, and `styles.css`
+3. Copy to your vault: `.obsidian/plugins/acp-client/`
+4. Reload Obsidian
+5. Enable the plugin in Settings → Community Plugins
+
+### Development Installation
+
+```bash
+# Clone into your vault's plugin folder
+cd /path/to/vault/.obsidian/plugins
+git clone https://github.com/yourusername/obsidian-acp-client acp-client
+cd acp-client
+
+# Install and build
+npm install
+npm run build
+```
+
+Enable the plugin in Obsidian Settings → Community Plugins.
 
 ## Configuration
 
-1. Open Settings → ACP Client
-2. Configure the following:
-   - **Agent Command**: Path to your ACP-compatible agent executable
-   - **Agent Arguments**: Command-line arguments to pass to the agent (comma-separated)
-   - **Auto-approve Write Permissions**: Automatically approve file write requests only, some form of vault backup _HIGHLY_ recommended
-   - **Auto-approve Read Permissions**: Automatically approve file read requests only
+### Basic Settings
+
+**Agent Command** (required)
+- Path to your ACP-compatible agent executable
+- Get the path using `which agent-name`
+- Example: `/usr/local/bin/claude-code-acp`
+
+**Agent Arguments** (optional)
+- Command-line arguments passed to the agent
+- Enter as comma-separated values
+- Example: `--model,claude-3-5-sonnet,--verbose`
+
+### Permission Settings
+
+**Auto-approve Read Permissions**
+- Automatically approve file read requests
+- Safe for most use cases
+- Files remain read-only unless write is also approved
+
+**Auto-approve Write Permissions**
+- Automatically approve file write requests
+- ⚠️ Use with caution-enables agents to modify files without confirmation
+- **Strongly recommend** vault backups (use [Obsidian Git](https://github.com/vincent-github/obsidian-git))
+
+### View Settings
+
+**Default View Type**
+- Choose where the agent view opens
+- Options: Right sidebar (default), Left sidebar, Main area tab, Split view
+
+### Conversation Tracking
+
+**Enable Conversation Tracking**
+- Auto-save all messages to markdown files after each agent turn
+- Great for keeping a record of interactions
+
+**Conversation Tracking Folder**
+- Where to save conversation files
+- Default: `conversations/`
+
+### Alpha Features
+
+> ⚠️ **These features are experimental and may change**
+
+**Metadata-Based Triggers** [⚠️ ALPHA]
+- Auto-activate agent when files have `acp-trigger: true` in frontmatter
+- See [Metadata-Based Triggers](#metadata-based-triggers-alpha) for details
+
+**MCP Server** [⚠️ ALPHA]
+- Expose Obsidian commands to agents via Model Context Protocol
+- See [MCP Server](#mcp-server-alpha) for details
+
+**Obsidian-Focused Prompt** [⚠️ ALPHA]
+- Inject Obsidian-specific context into agent prompts
+- Helps agents understand vault-specific conventions
+
+## Key Features (Detailed)
+
+### Permission System
+
+The plugin gives you complete control over what agents can access:
+
+**Inline Approval**
+When an agent requests permission, you'll see an inline request in the chat:
+- Clear description of what the agent wants to do
+- Multiple action buttons (Approve, Deny, etc.)
+- Request automatically dismissed after selection
+
+**Auto-Approval Modes**
+Toggle auto-approval in settings or during a session:
+- Read-only access is generally safe
+- Write access should be used carefully
+- Can be toggled mid-session via button in chat
+
+### Diff View
+
+Before writing files, agents show you exactly what will change:
+
+- **Side-by-side comparison**: Old content on left, new content on right
+- **Inline editing**: Modify the proposed changes before approval
+- **Syntax highlighting**: Code changes are easy to read
+- **Line-by-line diff**: See exactly what's added, removed, or modified
+
+Skip the diff view by enabling auto-approve write permissions in settings.
+
+### Autocomplete
+
+Speed up your workflow with smart autocomplete:
+
+**Command Autocomplete** (type `/`)
+- Shows available agent slash commands
+- Filtered automatically as you type
+- Press Enter or Tab to select
+
+**File Autocomplete** (type `@`)
+- Search all files in your vault
+- Fuzzy matching by filename
+- Inserts wiki-link format: `[[filename]]`
+
+**Navigation**
+- ↑/↓ arrow keys to navigate
+- Enter or Tab to select
+- Esc to cancel
+
+### Metadata-Based Triggers [⚠️ ALPHA]
+
+Automatically activate agents when you edit specific files:
+
+**Setup:**
+Add frontmatter to any note:
+```yaml
+---
+acp-trigger: true
+acp-prompt: "Review this note and suggest improvements"
+---
+```
+
+**How it works:**
+1. Edit and save a file with `acp-trigger: true`
+2. Optionally also set a custom prompt with `acp-prompt: "Tell a joke about this note"`
+3. Agent receives your custom prompt (or default prompt)
+
+**Configuration:**
+- Enable/disable in settings
+- Adjust debounce delay (in milliseconds) to avoid triggering before you're done editing
+
+**Use cases:**
+- Auto-review documentation on save
+- Validate code snippets in notes
+- Generate summaries of meeting notes
+
+### MCP Server [⚠️ ALPHA]
+
+Expose Obsidian commands to agents via Model Context Protocol:
+
+**What it does:**
+- Starts an HTTP server (default port 3100)
+- Provides two MCP tools:
+  - `list_obsidian_commands`: Get all available commands
+  - `execute_obsidian_command`: Run a command by ID
+- Agents can discover and execute any Obsidian command
+
+**Configuration:**
+- Enable in settings
+- Set custom port if 3100 is in use
+- Server starts when plugin loads
+
+**Example usage:**
+Agent can toggle spellcheck, create notes, run plugin commands, open files, etc.
+
+### Conversation Tracking
+
+Automatically save your agent conversations:
+
+**How it works:**
+- After each agent turn, messages are saved to a markdown file
+- Files are timestamped and organized by date
+- Includes both your prompts and agent responses
+- Tool calls and outputs are included
+
+**File format:**
+```
+conversations/
+├── 2024-01-15-conversation-1.md
+├── 2024-01-15-conversation-2.md
+└── 2024-01-16-conversation-1.md
+```
+
+**Benefits:**
+- Searchable conversation history
+- Reference past interactions
+- Build a knowledge base from agent assistance
 
 ## Usage
 
 ### Opening the Agent View
 
-1. Click the robot (bot) icon in the left ribbon
-2. Or use Command Palette → "Open Agent View"
-3. The agent panel will open in the right sidebar
-4. The agent will automatically connect when the view opens
+**Via Ribbon:**
+Click the robot icon in the left ribbon
+
+**Via Command Palette:**
+1. Press `Cmd/Ctrl + P`
+2. Type "Open Agent View"
+3. Press Enter
+
+The agent will automatically connect when the view opens.
 
 ### Sending Messages
 
-1. Type your message in the input field
-2. Press `Enter` to send (or `Shift+Enter` for a new line)
-3. The agent will process your request and respond
-
-### Using Autocomplete
-
-- **Commands**: Type `/` to see and autocomplete available agent slash commands
-- **Files**: Type `@` to search and autocomplete vault files
-- Use arrow keys to navigate suggestions, `Enter` or `Tab` to select, `Esc` to cancel
+1. Type your message in the input field at the bottom
+2. Use `Shift + Enter` for line breaks
+3. Press `Enter` to send
+4. Use autocomplete with `/` (commands) or `@` (files)
 
 ### Starting a New Conversation
 
-1. Click the "New Conversation" button in the status bar
-2. This will clean up the current session and start fresh
-3. The agent will automatically reconnect
+Click the **New Conversation** button in the status bar to:
+- Clear all messages
+- Reset the session
+- Start fresh with the agent
 
-### Disconnecting
+### Managing Multiple Sessions
 
-Use Command Palette → "Disconnect from Agent" to close the connection manually
+You can open multiple agent views simultaneously:
+- Each view maintains its own conversation
+- Views are numbered (Agent 1, Agent 2, etc.)
+- Close views individually via the X button
 
-## Commands
+### Switching Modes
 
-The plugin adds the following commands to Obsidian:
+Some agents support multiple modes (chat, code, plan, etc.):
+1. Use the mode dropdown in the status bar
+2. Or use Command Palette → "Cycle Agent Mode"
+3. Current mode is shown in the status bar
 
-- **Open Agent View**: Opens the agent chat interface
-- **Connect to Agent**: Connects to the configured agent
-- **Disconnect from Agent**: Closes the agent connection
+## ⚠️ Security Warning
 
-## Agent Client Protocol
+> **Always Review Commands Before Approval**
+>
+> AI agents can execute terminal commands on your system through this plugin. Commands run with the same permissions as Obsidian and can:
+> - Modify or delete files
+> - Install software
+> - Access your system
+> - Make network requests
+>
+> **Best practices:**
+> - Carefully review all bash commands before approving
+> - Understand what each command does
+> - When in doubt, deny and execute manually
+> - Keep backups of your vault
+> - Start with read-only permissions
 
-This plugin implements the [Agent Client Protocol](https://agentclientprotocol.com/) specification.
+## Recommended Plugins
+
+Enhance your ACP Client experience:
+
+**[Show Hidden Files](https://github.com/polyipseity/obsidian-show-hidden-files)** (highly recommended)
+- Makes dotfiles visible in Obsidian file explorer
+- Essential for seeing `.env`, `.gitignore`, config files, etc.
+- ACP Client can access hidden files regardless, but this helps you see them
+
+**[Obsidian Git](https://github.com/vincent-github/obsidian-git)** (highly recommended)
+- Version control for your vault
+- Critical backup when using auto-approve write permissions
+- Easily rollback unwanted changes
+
+## Requirements
+
+### Platform Support
+
+**Desktop Only** (Windows, macOS, Linux)
+- Requires access to local executables
+- Uses Node.js child processes
+- Not available on mobile (iOS/Android)
+
+**Dependencies**
+- Node.js (if using npm-based agents)
+- ACP-compatible agent installed separately
+
+## Troubleshooting
+
+### Agent Won't Connect
+
+**Check the agent command path:**
+```bash
+# Verify the executable exists
+which your-agent-command
+ls -la /path/to/agent
+```
+
+**Verify ACP support:**
+- Ensure your agent supports the Agent Client Protocol
+- Check agent documentation for ACP compatibility
+
+**Check developer console:**
+1. Press `Cmd/Ctrl + Shift + I`
+2. Look for error messages
+3. Check the Console tab
+
+**Common issues:**
+- Incorrect path to executable
+- Agent not installed
+- Missing authentication (Claude Code requires `claude-code auth`)
+- Wrong arguments passed to agent
+
+### Permission Errors
+
+**File read/write fails:**
+- Check if auto-approve settings match your intent
+- Verify file permissions in your OS
+- Ensure Obsidian has access to the vault folder
+
+**Permission UI not appearing:**
+- Check if auto-approve is enabled (may be bypassing UI)
+- Look for error messages in developer console
+
+### Terminal Commands Fail
+
+**Command not found:**
+- Verify the command exists in your PATH
+- Try running the command manually in your terminal
+
+**Permission denied:**
+- Check file/folder permissions
+- Some commands require sudo (not recommended through plugin)
+
+**Wrong working directory:**
+- By default, commands run in your vault root
+- Agents can specify custom working directories
+
+### Agent-Specific Issues
+
+**Claude Code:**
+- Run `claude-code auth` if authentication fails
+- Ensure `@zed-industries/claude-code-acp` is installed globally
+- Check for updates: `npm update -g @zed-industries/claude-code-acp`
+
+**Other Agents:**
+- Check agent-specific documentation
+- Verify ACP implementation version
+- Look for known compatibility issues
+
+### Still Having Issues?
+
+1. Check [GitHub Issues](../../issues) for similar problems
+2. Enable debug logging in developer console
+3. Create a new issue with:
+   - Your OS and Obsidian version
+   - Agent name and version
+   - Error messages from console
+   - Steps to reproduce
+
+## FAQ
+
+**Q: Can I use multiple agents at the same time?**
+A: Yes! Open multiple agent views and configure each with a different agent command.
+
+**Q: Are my conversations private?**
+A: Conversations are sent to the agent provider (e.g., Anthropic for Claude). Check your agent's privacy policy.
+
+**Q: Can agents access files outside my vault?**
+A: No, file operations are restricted to your vault directory only.
+
+**Q: What happens if I close Obsidian during an agent session?**
+A: The agent process is terminated. Conversations are not automatically resumed.
+
+**Q: Can I use this on mobile?**
+A: No, this plugin requires desktop Obsidian due to Node.js process requirements.
+
+**Q: Does this work with the Obsidian API for plugins?**
+A: Yes, agents with MCP server access can execute Obsidian commands, including those from other plugins.
+
+## Contributing
+
+Contributions are welcome! Here's how you can help:
+
+**Agent Support:**
+- Test with different ACP-compatible agents
+- Document setup instructions and known issues
+- Submit compatibility reports
+
+**Code Contributions:**
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Make your changes with clear commit messages
+4. Submit a pull request
+
+**Bug Reports:**
+- Use [GitHub Issues](../../issues)
+- Include reproduction steps
+- Provide console logs
+- Specify your environment
+
+**Documentation:**
+- Improve setup instructions
+- Add troubleshooting tips
+- Clarify confusing sections
 
 ## Development
+
+### Building
+
+```bash
+# Development mode (watch for changes)
+npm run dev
+
+# Production build
+npm run build
+
+# Version bump (before releases)
+npm run version
+```
 
 ### Project Structure
 
 ```
 acp-client/
-├── main.ts              # Plugin class, commands, view registration
-├── acp-client.ts        # ACP protocol client, process spawning, callbacks
-├── agent-view.ts        # Chat UI, message rendering, autocomplete
-├── settings.ts          # Settings interface and defaults
-├── settings-tab.ts      # Settings UI component
+├── main.ts              # Plugin entry point, commands
+├── acp-client.ts        # ACP protocol implementation
+├── agent-view.ts        # Chat UI and message rendering
+├── settings.ts          # Settings interface
+├── settings-tab.ts      # Settings UI
 ├── styles.css           # Plugin styles
-├── manifest.json        # Obsidian plugin metadata
-├── package.json         # Dependencies and scripts
-├── tsconfig.json        # TypeScript configuration
-├── esbuild.config.mjs   # Build configuration (bundles to main.js)
-├── version-bump.mjs     # Version management script
-└── CLAUDE.md            # Developer documentation for Claude Code
+├── manifest.json        # Plugin metadata
+├── package.json         # Dependencies
+└── CLAUDE.md            # Developer documentation
 ```
 
-### Building
+## Credits
 
-```bash
-# Development build (with watch mode)
-npm run dev
-
-# Production build
-npm run build
-```
-
-## Troubleshooting
-
-### Agent won't connect
-
-- Verify the agent command path is correct
-- Check that the agent supports ACP
-- Look for error messages in the developer console (Ctrl+Shift+I)
-
-### Permission errors
-
-- Check your permission settings in Settings → ACP Client
-- Enable "Auto-approve Read Permissions" to allow automatic file reads
-- Inline permission requests will appear in the chat for manual approval
-- Ensure file paths are being properly converted between absolute and vault-relative
-
-### Terminal commands fail
-
-- Check the agent has permission to execute commands
-- Verify the working directory is correct
-- Look for errors in terminal output
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+Built with:
+- [Obsidian Plugin API](https://github.com/obsidianmd/obsidian-api)
+- [@zed-industries/agent-client-protocol](https://github.com/zed-industries/agent-client-protocol)
+- [Agent Client Protocol Specification](https://agentclientprotocol.com/)
 
 ## License
 
 MIT
 
-## Credits
+---
 
-- Built with the [Obsidian Plugin API](https://github.com/obsidianmd/obsidian-api)
-- Uses [@zed-industries/agent-client-protocol](https://github.com/zed-industries/agent-client-protocol)
-- Follows the [Agent Client Protocol specification](https://agentclientprotocol.com/)
+**Agent Client Protocol**: Learn more about ACP at [agentclientprotocol.com](https://agentclientprotocol.com/)

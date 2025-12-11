@@ -175,6 +175,8 @@ export class DiffView extends ItemView {
 		this.leaf.detach();
 	}
 
+	// Obsidian's ItemView requires async signature even though cleanup is synchronous
+	// eslint-disable-next-line @typescript-eslint/require-await
 	async onClose(): Promise<void> {
 		// Destroy editor view
 		if (this.editorView) {

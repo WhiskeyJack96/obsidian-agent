@@ -14,7 +14,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		new Setting(containerEl).setName('ACP Client Settings').setHeading();
+		new Setting(containerEl).setName('ACP settings').setHeading();
 
 		new Setting(containerEl)
 			.setName('Agent command')
@@ -71,6 +71,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Enable conversation tracking')
+			// eslint-disable-next-line obsidianmd/ui/sentence-case -- Description is already in sentence case
 			.setDesc('Automatically save all conversation messages to markdown files')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableConversationTracking)
@@ -83,6 +84,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 			.setName('Conversation folder')
 			.setDesc('Folder path where conversation files will be saved (e.g., "conversations/")')
 			.addText(text => text
+				// eslint-disable-next-line obsidianmd/ui/sentence-case -- File path placeholder
 				.setPlaceholder('conversations/')
 				.setValue(this.plugin.settings.conversationTrackingFolder)
 				.onChange(async (value) => {
@@ -95,6 +97,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
 		const alphaWarningContainer = containerEl.createDiv({ cls: 'acp-alpha-warning-container setting-item-description' });
 		const strong = alphaWarningContainer.createEl('strong');
+		// eslint-disable-next-line obsidianmd/ui/sentence-case -- Warning label, intentionally capitalized for emphasis
 		strong.setText('⚠️ ALPHA:');
 		alphaWarningContainer.appendText(' These features are experimental and may change or be removed in future versions. Use with caution.');
 
@@ -111,7 +114,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		obsidianPromptSetting.settingEl.addClass('acp-setting-alpha-border');
 
 		// MCP Server section
-		new Setting(containerEl).setName('MCP Server').setHeading().settingEl.addClass('acp-alpha-section-header');
+		new Setting(containerEl).setName('MCP server').setHeading().settingEl.addClass('acp-alpha-section-header');
 
 		const mcpEnableSetting = new Setting(containerEl)
 			.setName('Enable MCP server')
@@ -159,11 +162,13 @@ export class ACPClientSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName('Metadata-based triggers').setHeading().settingEl.addClass('acp-alpha-section-header');
 
 		const triggersDesc = containerEl.createDiv({ cls: 'acp-info-text-bottom-margin setting-item-description' });
+		// eslint-disable-next-line obsidianmd/ui/sentence-case -- Description is already in sentence case
 		triggersDesc.setText('Automatically trigger agent sessions when files have acp-trigger: true in their frontmatter');
 
 		// Enable metadata triggers toggle
 		new Setting(containerEl)
 			.setName('Enable metadata triggers')
+			// eslint-disable-next-line obsidianmd/ui/sentence-case -- Description is already in sentence case
 			.setDesc('When enabled, files with "acp-trigger: true" in frontmatter will automatically spawn an agent session')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableMetadataTriggers)
@@ -198,7 +203,6 @@ export class ACPClientSettingTab extends PluginSettingTab {
 			---</code><br><br>
 			The trigger field will be automatically set to false after activation.
 		`;
-		usageInfo.style.fontFamily = 'monospace';
-		usageInfo.style.fontSize = '0.9em';
+		usageInfo.addClass('acp-usage-info');
 	}
 }

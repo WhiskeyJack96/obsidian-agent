@@ -22,7 +22,9 @@ export default tseslint.config(
 			"obsidianmd/no-static-styles-assignment": "error",
 			"obsidianmd/detach-leaves": "error",
 			"obsidianmd/commands/no-default-hotkeys": "error",
-			"obsidianmd/ui/sentence-case": "warn",
+			"obsidianmd/ui/sentence-case": ["warn", {
+				acronyms: ["ACP", "MCP", "ID"],
+			}],
 			"obsidianmd/settings-tab/no-manual-html-headings": "error",
 			"obsidianmd/no-sample-code": "warn",
 			// TypeScript ESLint rules
@@ -44,6 +46,7 @@ export default tseslint.config(
 			"__mocks__/**",
 			"**/*.test.ts",
 			"**/*.spec.ts",
+			"tests/**",
 		],
 	}
 );

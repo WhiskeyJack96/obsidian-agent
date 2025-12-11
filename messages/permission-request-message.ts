@@ -26,6 +26,7 @@ export class PermissionRequestMessage extends Message {
 
 		// Show what permission is being requested
 		const headerEl = contentEl.createDiv({ cls: 'acp-permission-header' });
+		// eslint-disable-next-line obsidianmd/ui/sentence-case -- "Permission required" is already in sentence case
 		headerEl.createEl('strong', { text: '🔐 Permission required' });
 
 		if (this.params.toolCall && this.params.toolCall.title) {

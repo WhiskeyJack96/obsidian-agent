@@ -55,7 +55,7 @@ export default class ACPClientPlugin extends Plugin {
 		});
 
 		// Add ribbon icon
-		this.addRibbonIcon('bot', 'Open ACP agent', () => {
+		this.addRibbonIcon('bot', 'New agent', () => {
 			void this.activateView();
 		});
 
@@ -256,7 +256,8 @@ export default class ACPClientPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const data = await this.loadData() as Partial<ACPClientSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data || {});
 	}
 
 	async saveSettings() {

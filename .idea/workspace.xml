@@ -5,9 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4877294b-421b-42da-be97-e3a77a5b85cf" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/acp-client.ts" beforeDir="false" afterPath="$PROJECT_DIR$/acp-client.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/prompt.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/todo.md" beforeDir="false" afterPath="$PROJECT_DIR$/todo.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/diff-view.ts" beforeDir="false" afterPath="$PROJECT_DIR$/diff-view.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eslint.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/eslint.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/feedback.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/main.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mcp-server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mcp-server.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/messages/permission-request-message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/permission-request-message.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/settings-tab.ts" beforeDir="false" afterPath="$PROJECT_DIR$/settings-tab.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/styles.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trigger-manager.ts" beforeDir="false" afterPath="$PROJECT_DIR$/trigger-manager.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -18,9 +27,9 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 8
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
   <component name="ProjectId" id="35S1c2dnLcYFKobHDxYER0Bx26u" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -40,7 +49,10 @@
     "go.import.settings.migrated": "true",
     "go.sdk.automatically.set": "true",
     "last_opened_file_path": "/Users/jacobmikesell",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "ml.llm.AIAssistantPromptsLibrary",
     "ts.external.directory.path": "/Users/jacobmikesell/Workspace/plugin-test-vault/.obsidian/plugins/acp-client/node_modules/typescript/lib"
   }
 }]]></component>

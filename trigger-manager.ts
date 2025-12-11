@@ -51,14 +51,14 @@ export class TriggerManager {
 		this.plugin.registerEvent(
 			this.vault.on('create', (file) => {
 				if (file instanceof TFile) {
-					void this.handleVaultEvent(file, 'created');
+					void this.handleVaultEvent(file);
 				}
 			})
 		);
 		this.plugin.registerEvent(
 			this.vault.on('modify', (file) => {
 				if (file instanceof TFile) {
-					void this.handleVaultEvent(file, 'modified');
+					void this.handleVaultEvent(file);
 				}
 			})
 		);
@@ -67,7 +67,7 @@ export class TriggerManager {
 	/**
 	 * Handle vault events with debouncing
 	 */
-	private async handleVaultEvent(file: TFile, _event: 'created' | 'modified') {
+	private async handleVaultEvent(file: TFile) {
 		const filePath = file.path;
 
 		// Skip if metadata triggers are disabled
@@ -145,12 +145,16 @@ export class TriggerManager {
 
 			// Use processFrontMatter to read the current value
 			// Since we don't modify the frontmatter object, this won't trigger a file write
-			await this.plugin.app.fileManager.processFrontMatter(file, (frontmatter) => {
-				triggerValue = frontmatter['acp-trigger'] === true;
-                prompt = frontmatter['acp-prompt'];
-                if (triggerValue) {
-                    frontmatter['acp-trigger'] = false;
-                }
+			await this.plugin.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
+				const trigger = frontmatter['acp-trigger'];
+				triggerValue = trigger === true;
+
+				const promptValue = frontmatter['acp-prompt'];
+				prompt = typeof promptValue === 'string' ? promptValue : '';
+
+				if (triggerValue) {
+					frontmatter['acp-trigger'] = false;
+				}
 			});
 
 			return {triggerValue, prompt};

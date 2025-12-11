@@ -1301,3 +1301,9 @@
 .acp-autocomplete-hidden {
 	display: none;
 }
+
+/* Usage Info Styling */
+.acp-usage-info {
+	font-family: var(--font-monospace);
+	font-size: 0.9em;
+}

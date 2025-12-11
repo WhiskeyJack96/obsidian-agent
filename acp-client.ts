@@ -11,6 +11,16 @@ import { DiffData, DiffResult } from './diff-view';
 import {shellEnv} from 'shell-env';
 import { SessionUpdate, SessionModeState } from './types';
 
+// Type definition for Obsidian's internal backlinks API
+interface BacklinksData {
+	data: Map<string, unknown>;
+	size: number;
+}
+
+interface MetadataCacheWithBacklinks {
+	getBacklinksForFile?: (file: unknown) => BacklinksData | null;
+}
+
 export class ACPClient {
 	private app: App;
 	private settings: ACPClientSettings;
@@ -94,27 +104,25 @@ export class ACPClient {
 		});
 
 		// Create the stream using ndJsonStream
-		// Type cast needed due to minor incompatibility between @types/node v20 Web Streams and ACP SDK types
 		const stream = ndJsonStream(
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			webOutputStream as any,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			webInputStream as any
+			webOutputStream,
+			webInputStream
 		);
 
 		// Create ClientSideConnection with proper signature
 		this.connection = new ClientSideConnection(
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			(_agent: Agent): Client => {
 				return {
-					requestPermission: this.handleRequestPermission.bind(this),
-					sessionUpdate: this.handleSessionUpdate.bind(this),
-					readTextFile: this.handleReadTextFile.bind(this),
-					writeTextFile: this.handleWriteTextFile.bind(this),
-					createTerminal: this.handleTerminalCreate.bind(this),
-					terminalOutput: this.handleTerminalOutput.bind(this),
-					releaseTerminal: this.handleTerminalRelease.bind(this),
-					waitForTerminalExit: this.handleTerminalWaitForExit.bind(this),
-					killTerminal: this.handleTerminalKill.bind(this)
+					requestPermission: this.handleRequestPermission.bind(this) as Client['requestPermission'],
+					sessionUpdate: this.handleSessionUpdate.bind(this) as Client['sessionUpdate'],
+					readTextFile: this.handleReadTextFile.bind(this) as Client['readTextFile'],
+					writeTextFile: this.handleWriteTextFile.bind(this) as Client['writeTextFile'],
+					createTerminal: this.handleTerminalCreate.bind(this) as Client['createTerminal'],
+					terminalOutput: this.handleTerminalOutput.bind(this) as Client['terminalOutput'],
+					releaseTerminal: this.handleTerminalRelease.bind(this) as Client['releaseTerminal'],
+					waitForTerminalExit: this.handleTerminalWaitForExit.bind(this) as Client['waitForTerminalExit'],
+					killTerminal: this.handleTerminalKill.bind(this) as Client['killTerminal']
 				};
 			},
 			stream
@@ -221,7 +229,8 @@ export class ACPClient {
 			}
 
 		} catch (err) {
-			throw new Error(`Failed to load session: ${err.message || 'Session not found. The session ID may not exist or may have expired.'}`);
+			const message = err instanceof Error ? err.message : 'Unknown error';
+			throw new Error(`Failed to load session: ${message || 'Session not found. The session ID may not exist or may have expired.'}`);
 		}
 	}
 
@@ -347,12 +356,12 @@ export class ACPClient {
 
 			// Add backlinks to the content for context
 			let contextContent = content;
-			// @ts-expect-error - getBacklinksForFile is not in the types yet
-			if (this.app.metadataCache.getBacklinksForFile) {
-				// @ts-expect-error - Obsidian internal API for backlinks
-				const backlinks = this.app.metadataCache.getBacklinksForFile(file);
+			// Use internal Obsidian API for backlinks (properly typed)
+			const metadataCache = this.app.metadataCache as MetadataCacheWithBacklinks;
+			if (metadataCache.getBacklinksForFile) {
+				const backlinks = metadataCache.getBacklinksForFile(file);
 				if (backlinks && backlinks.data && backlinks.data.size > 0) {
-					contextContent += '\n\n<!-- Backlinks (Added by ACP) -->\n# Backlinks\n';
+					contextContent += '\n\n<!-- Backlinks (Automatically added) -->\n# Backlinks\n';
 					const files = Array.from(backlinks.data.keys());
 					files.forEach((path: string) => {
 						contextContent += `- [[${path}]]\n`;
@@ -363,7 +372,8 @@ export class ACPClient {
 			return { content: contextContent };
 		} catch (err) {
 			console.error('File read error:', err);
-			throw new Error(`Failed to read file: ${err.message}`);
+			const message = err instanceof Error ? err.message : String(err);
+			throw new Error(`Failed to read file: ${message}`);
 		}
 	}
 
@@ -437,7 +447,8 @@ export class ACPClient {
 			return {};
 		} catch (err) {
 			console.error('File write error:', err);
-			throw new Error(`Failed to write file: ${err.message}`);
+			const message = err instanceof Error ? err.message : String(err);
+			throw new Error(`Failed to write file: ${message}`);
 		}
 	}
 
@@ -488,14 +499,14 @@ export class ACPClient {
 		this.terminals.set(terminalId, terminalData);
 
 		// Collect output continuously
-		terminal.stdout?.on('data', (data) => {
+		terminal.stdout?.on('data', (data: Buffer) => {
 			const terminal = this.terminals.get(terminalId);
 			if (terminal) {
 				terminal.output.stdout += data.toString();
 			}
 		});
 
-		terminal.stderr?.on('data', (data) => {
+		terminal.stderr?.on('data', (data: Buffer) => {
 			const terminal = this.terminals.get(terminalId);
 			if (terminal) {
 				terminal.output.stderr += data.toString();

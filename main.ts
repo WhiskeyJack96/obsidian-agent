@@ -276,10 +276,10 @@ export default class ACPClientPlugin extends Plugin {
 			});
 
 			await this.mcpServer.start();
-			new Notice(`MCP Server started on port ${this.settings.mcpServerPort}`);
+			new Notice(`Server started on port ${this.settings.mcpServerPort}`);
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-			new Notice(`Failed to start MCP Server: ${errorMessage}`);
+			new Notice(`Failed to start mcp server: ${errorMessage}`);
 			console.error('Failed to start MCP Server:', error);
 		}
 	}
@@ -288,7 +288,7 @@ export default class ACPClientPlugin extends Plugin {
 		if (this.mcpServer) {
 			await this.mcpServer.stop();
 			this.mcpServer = null;
-			new Notice('MCP server stopped');
+			new Notice('Server stopped');
 		}
 	}
 }

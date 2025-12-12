@@ -105,11 +105,11 @@ export class ACPClientSettingTab extends PluginSettingTab {
         obsidianPromptSetting.settingEl.addClass('acp-setting-alpha-border');
 
         // MCP Server section
-        new Setting(containerEl).setName('MCP server').setHeading().settingEl.addClass('acp-alpha-section-header');
+        new Setting(containerEl).setName('Model context protocol server').setHeading().settingEl.addClass('acp-alpha-section-header');
 
         const mcpEnableSetting = new Setting(containerEl)
-            .setName('Enable MCP server')
-            .setDesc('Start an embedded MCP server that exposes Obsidian commands. The agent can connect to this server to execute Obsidian commands.')
+            .setName('Enable mcp server')
+            .setDesc('Start an embedded mcp server that exposes Obsidian commands. The agent can connect to this server to execute Obsidian commands.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableMCPServer)
                 .onChange(async (value) => {
@@ -126,8 +126,8 @@ export class ACPClientSettingTab extends PluginSettingTab {
         mcpEnableSetting.settingEl.addClass('acp-setting-alpha-border');
 
         const mcpPortSetting = new Setting(containerEl)
-            .setName('MCP server port')
-            .setDesc('Port number for the MCP server (requires restart if server is running)')
+            .setName('Server port')
+            .setDesc('Port number for the mcp server (requires restart if server is running)')
             .addText(text => text
                 .setPlaceholder('3100')
                 .setValue(String(this.plugin.settings.mcpServerPort))
@@ -147,7 +147,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
         // Add MCP server info
         const mcpInfoEl = containerEl.createDiv({cls: 'acp-info-text setting-item-description'});
-        mcpInfoEl.setText(`MCP Server endpoint: http://localhost:${this.plugin.settings.mcpServerPort}/mcp`);
+        mcpInfoEl.setText(`Server endpoint: http://localhost:${this.plugin.settings.mcpServerPort}/mcp`);
 
         // Metadata-Based Triggers section
         new Setting(containerEl).setName('Metadata-based triggers').setHeading().settingEl.addClass('acp-alpha-section-header');
@@ -183,15 +183,21 @@ export class ACPClientSettingTab extends PluginSettingTab {
 
         // Usage instructions
         const usageInfo = containerEl.createDiv({cls: 'acp-info-text-bottom-margin setting-item-description'});
-        usageInfo.innerHTML = `
-			<strong>Usage:</strong><br>
-			Add to note frontmatter:<br>
-			<code>---<br>
-			acp-trigger: true<br>
-			acp-prompt: "Your custom prompt here"<br>
-			---</code><br><br>
-			The trigger field will be automatically set to false after activation.
-		`;
+        usageInfo.createEl('strong', {text: 'Usage:'});
+        usageInfo.createEl('br');
+        usageInfo.appendText('Add to note frontmatter:');
+        usageInfo.createEl('br');
+        const codeBlock = usageInfo.createEl('code');
+        codeBlock.appendText('---');
+        codeBlock.createEl('br');
+        codeBlock.appendText('acp-trigger: true');
+        codeBlock.createEl('br');
+        codeBlock.appendText('acp-prompt: "Your custom prompt here"');
+        codeBlock.createEl('br');
+        codeBlock.appendText('---');
+        usageInfo.createEl('br');
+        usageInfo.createEl('br');
+        usageInfo.appendText('The trigger field will be automatically set to false after activation.');
         usageInfo.addClass('acp-usage-info');
     }
 }

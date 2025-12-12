@@ -5,22 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4877294b-421b-42da-be97-e3a77a5b85cf" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/acp-client.ts" beforeDir="false" afterPath="$PROJECT_DIR$/acp-client.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent-view.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agent-view.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diff-view.ts" beforeDir="false" afterPath="$PROJECT_DIR$/diff-view.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/eslint.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/eslint.config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mcp-server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mcp-server.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/messages/base-message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/base-message.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/messages/commands-message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/commands-message.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/messages/debug-message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/debug-message.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/messages/message-renderer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/message-renderer.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/messages/pending-message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/pending-message.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/messages/text-message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/text-message.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/messages/thought-message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/thought-message.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/messages/tool-call-message.ts" beforeDir="false" afterPath="$PROJECT_DIR$/messages/tool-call-message.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plan-view.ts" beforeDir="false" afterPath="$PROJECT_DIR$/plan-view.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/settings-tab.ts" beforeDir="false" afterPath="$PROJECT_DIR$/settings-tab.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

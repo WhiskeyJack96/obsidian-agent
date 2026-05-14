@@ -15,7 +15,7 @@ export class ACPClientSettingTab extends PluginSettingTab {
         containerEl.empty();
         new Setting(containerEl)
             .setName('Agent command')
-            .setDesc('Path to the agent executable (e.g., /usr/local/bin/claude-code)')
+            .setDesc('Path to the agent executable (e.g., /opt/homebrew/bin/claude-agent-acp)')
             .addText(text => text
                 .setPlaceholder('/path/to/agent')
                 .setValue(this.plugin.settings.agentCommand)

@@ -39,7 +39,7 @@ npm install
 **acp-client.ts** - ACP protocol implementation
 - Spawns external agent process using Node's `child_process.spawn`
 - Converts Node.js streams to Web Streams for ACP library compatibility
-- Creates `ClientSideConnection` from `@zed-industries/agent-client-protocol`
+- Creates `ClientSideConnection` from `@agentclientprotocol/sdk`
 - Implements all required ACP client methods as protocol callbacks
 - Manages terminal subprocesses spawned by agent requests
 - Handles vault path resolution for file operations
@@ -144,5 +144,5 @@ acp-client/
 ## Dependencies
 
 - `obsidian` - Obsidian plugin API (dev dependency, provided at runtime)
-- `@zed-industries/agent-client-protocol` - ACP TypeScript library for client/agent communication
+- `@agentclientprotocol/sdk` - ACP TypeScript SDK for client/agent communication
 - Node.js built-in modules: `child_process`, `stream`, `stream/web`

@@ -582,7 +582,7 @@ acp-client/
 
 Built with:
 - [Obsidian Plugin API](https://github.com/obsidianmd/obsidian-api)
-- [@zed-industries/agent-client-protocol](https://github.com/zed-industries/agent-client-protocol)
+- [@agentclientprotocol/sdk](https://github.com/agentclientprotocol/typescript-sdk)
 - [Agent Client Protocol Specification](https://agentclientprotocol.com/)
 
 ## License

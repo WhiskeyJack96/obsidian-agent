@@ -179,7 +179,8 @@ Enable the plugin in Obsidian Settings → Community Plugins.
 **Agent Arguments** (optional)
 - Command-line arguments passed to the agent
 - Enter as comma-separated values
-- Example: `--model,claude-3-5-sonnet,--verbose`
+- Example: `--model,claude-sonnet-4-6,--verbose`
+- Other current models: `claude-opus-4-7` (most capable), `claude-haiku-4-5` (fastest)
 
 ### Permission Settings
 

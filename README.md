@@ -78,11 +78,11 @@ npm install -g @anthropics/claude-code
 claude-code auth
 
 # Install the ACP adapter
-npm install -g @zed-industries/claude-code-acp
+npm install -g @agentclientprotocol/claude-agent-acp
 ```
 
 **Configuration:**
-1. Get the adapter path: `which claude-code-acp`
+1. Get the adapter path: `which claude-agent-acp`
 2. In Obsidian Settings → ACP Client:
    - **Agent Command**: Paste the full path from step 1
    - **Agent Arguments**: Leave empty
@@ -174,12 +174,13 @@ Enable the plugin in Obsidian Settings → Community Plugins.
 **Agent Command** (required)
 - Path to your ACP-compatible agent executable
 - Get the path using `which agent-name`
-- Example: `/usr/local/bin/claude-code-acp`
+- Example: `/opt/homebrew/bin/claude-agent-acp`
 
 **Agent Arguments** (optional)
 - Command-line arguments passed to the agent
 - Enter as comma-separated values
-- Example: `--model,claude-3-5-sonnet,--verbose`
+- Example: `--model,claude-sonnet-4-6,--verbose`
+- Other current models: `claude-opus-4-7` (most capable), `claude-haiku-4-5` (fastest)
 
 ### Permission Settings
 
@@ -483,8 +484,8 @@ ls -la /path/to/agent
 
 **Claude Code:**
 - Run `claude-code auth` if authentication fails
-- Ensure `@zed-industries/claude-code-acp` is installed globally
-- Check for updates: `npm update -g @zed-industries/claude-code-acp`
+- Ensure `@agentclientprotocol/claude-agent-acp` is installed globally
+- Check for updates: `npm update -g @agentclientprotocol/claude-agent-acp`
 
 **Other Agents:**
 - Check agent-specific documentation
@@ -581,7 +582,7 @@ acp-client/
 
 Built with:
 - [Obsidian Plugin API](https://github.com/obsidianmd/obsidian-api)
-- [@zed-industries/agent-client-protocol](https://github.com/zed-industries/agent-client-protocol)
+- [@agentclientprotocol/sdk](https://github.com/agentclientprotocol/typescript-sdk)
 - [Agent Client Protocol Specification](https://agentclientprotocol.com/)
 
 ## License
